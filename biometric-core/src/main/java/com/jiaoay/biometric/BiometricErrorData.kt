@@ -1,74 +1,56 @@
-package com.jiaoay.biometric;
+package com.jiaoay.biometric
 
-import androidx.annotation.Nullable;
-
-import java.util.Arrays;
+import com.jiaoay.biometric.BiometricPrompt.AuthenticationError
+import java.util.*
 
 /**
  * A container for data associated with a biometric authentication error, which may be handled by
  * the client application's callback.
  */
-public class BiometricErrorData {
+class BiometricErrorData(
     /**
      * An integer ID associated with this error.
      */
-    @BiometricPrompt.AuthenticationError private final int mErrorCode;
-
+    @field:AuthenticationError @get:AuthenticationError val errorCode: Int,
     /**
      * A human-readable message that describes the error.
      */
-    @Nullable private final CharSequence mErrorMessage;
+    val errorMessage: CharSequence?
+) {
 
-    public BiometricErrorData(int errorCode, @Nullable CharSequence errorMessage) {
-        mErrorCode = errorCode;
-        mErrorMessage = errorMessage;
+    override fun hashCode(): Int {
+        return Arrays.hashCode(arrayOf<Any?>(errorCode, convertToString(errorMessage)))
     }
 
-    @BiometricPrompt.AuthenticationError
-    public int getErrorCode() {
-        return mErrorCode;
-    }
-
-    @Nullable
-    public CharSequence getErrorMessage() {
-        return mErrorMessage;
-    }
-
-    @Override
-    public int hashCode() {
-        return Arrays.hashCode(new Object[] {mErrorCode, convertToString(mErrorMessage)});
-    }
-
-    @Override
-    public boolean equals(@Nullable Object obj) {
-        if (obj instanceof BiometricErrorData) {
-            final BiometricErrorData other = (BiometricErrorData) obj;
-            return mErrorCode == other.mErrorCode && isErrorMessageEqualTo(other.mErrorMessage);
+    override fun equals(obj: Any?): Boolean {
+        if (obj is BiometricErrorData) {
+            val other = obj
+            return errorCode == other.errorCode && isErrorMessageEqualTo(other.errorMessage)
         }
-        return false;
+        return false
     }
 
     /**
      * Checks if a given error message is equivalent to the one for this object.
      *
      * @param otherMessage A message to compare to the error message for this object.
-     * @return Whether the error message for this object and {@code otherMessage} are equivalent.
+     * @return Whether the error message for this object and `otherMessage` are equivalent.
      */
-    private boolean isErrorMessageEqualTo(@Nullable CharSequence otherMessage) {
-        final String errorString = convertToString(mErrorMessage);
-        final String otherString = convertToString(otherMessage);
-        return (errorString == null && otherString == null)
-                || (errorString != null && errorString.equals(otherString));
+    private fun isErrorMessageEqualTo(otherMessage: CharSequence?): Boolean {
+        val errorString = convertToString(errorMessage)
+        val otherString = convertToString(otherMessage)
+        return errorString == null && otherString == null || errorString != null && errorString == otherString
     }
 
-    /**
-     * Converts a nullable {@link CharSequence} message to an equivalent {@link String}.
-     *
-     * @param message The message to be converted.
-     * @return A string matching the given message, or {@code null} if message is {@code null}.
-     */
-    @Nullable
-    private static String convertToString(@Nullable CharSequence message) {
-        return message != null ? message.toString() : null;
+    companion object {
+        /**
+         * Converts a nullable [CharSequence] message to an equivalent [String].
+         *
+         * @param message The message to be converted.
+         * @return A string matching the given message, or `null` if message is `null`.
+         */
+        private fun convertToString(message: CharSequence?): String? {
+            return message?.toString()
+        }
     }
 }

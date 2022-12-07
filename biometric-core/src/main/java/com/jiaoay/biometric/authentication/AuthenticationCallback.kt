@@ -1,4 +1,4 @@
-package com.jiaoay.biometric
+package com.jiaoay.biometric.authentication
 
 import com.jiaoay.biometric.BiometricPrompt.AuthenticationError
 

@@ -2,11 +2,12 @@ package com.jiaoay.biometric.demo
 
 import android.os.Build
 import androidx.fragment.app.FragmentActivity
-import com.jiaoay.biometric.AuthenticationCallback
-import com.jiaoay.biometric.AuthenticationResult
-import com.jiaoay.biometric.BiometricManager
-import com.jiaoay.biometric.CryptoObject
+import com.jiaoay.biometric.authentication.AuthenticationCallback
+import com.jiaoay.biometric.authentication.AuthenticationResult
+import com.jiaoay.biometric.manager.BiometricManager
+import com.jiaoay.biometric.crypto.CryptoObject
 import com.jiaoay.biometric.PromptInfo
+import com.jiaoay.biometric.manager.Authenticators
 import com.jiaoay.biometric.ui.BiometricDialogManager
 
 class BiometricHelper(private val activity: FragmentActivity) {
@@ -27,7 +28,7 @@ class BiometricHelper(private val activity: FragmentActivity) {
 
     fun getBiometricType(): BiometricType =
         if (checkMinVersion() && cryptoHelper.checkOneBiometricMustBeEnrolled()) {
-            when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)) {
+            when (biometricManager.canAuthenticate(Authenticators.BIOMETRIC_WEAK)) {
                 BiometricManager.BIOMETRIC_SUCCESS,
                 BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> when {
                     availableFeatures.isEmpty() -> BiometricType.NONE

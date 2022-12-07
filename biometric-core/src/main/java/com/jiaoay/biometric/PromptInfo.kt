@@ -2,7 +2,7 @@ package com.jiaoay.biometric
 
 import android.os.Build
 import android.text.TextUtils
-import com.jiaoay.biometric.BiometricManager.AuthenticatorTypes
+import com.jiaoay.biometric.manager.AuthenticatorTypes
 
 /**
  * A set of configurable options for how the {@link BiometricPrompt} should appear and behave.

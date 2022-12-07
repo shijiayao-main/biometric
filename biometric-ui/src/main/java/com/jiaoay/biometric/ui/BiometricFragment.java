@@ -24,18 +24,19 @@ import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.jiaoay.biometric.AuthenticationCallback;
-import com.jiaoay.biometric.AuthenticationResult;
+import com.jiaoay.biometric.authentication.AuthenticationCallback;
+import com.jiaoay.biometric.authentication.AuthenticationResult;
 import com.jiaoay.biometric.AuthenticatorUtils;
 import com.jiaoay.biometric.BiometricErrorData;
-import com.jiaoay.biometric.BiometricManager;
-import com.jiaoay.biometric.BiometricManager.Authenticators;
+import com.jiaoay.biometric.manager.AuthenticatorTypes;
+import com.jiaoay.biometric.manager.BiometricManager;
+import com.jiaoay.biometric.manager.Authenticators;
 import com.jiaoay.biometric.BiometricPrompt;
 import com.jiaoay.biometric.BiometricUtil;
-import com.jiaoay.biometric.CryptoObject;
-import com.jiaoay.biometric.CryptoObjectUtils;
-import com.jiaoay.biometric.KeyguardUtils;
-import com.jiaoay.biometric.PackageUtils;
+import com.jiaoay.biometric.crypto.CryptoObject;
+import com.jiaoay.biometric.crypto.CryptoObjectUtils;
+import com.jiaoay.biometric.keyguard.KeyguardUtils;
+import com.jiaoay.biometric.pack.PackageUtils;
 import com.jiaoay.biometric.PromptInfo;
 import com.jiaoay.biometric_ui.R;
 
@@ -366,7 +367,7 @@ public class BiometricFragment extends Fragment {
         mViewModel.setPromptInfo(info);
 
         // Use a fake crypto object to force Strong biometric auth prior to Android 11 (API 30).
-        @BiometricManager.AuthenticatorTypes final int authenticators = AuthenticatorUtils.getConsolidatedAuthenticators(info, crypto);
+        @AuthenticatorTypes final int authenticators = AuthenticatorUtils.getConsolidatedAuthenticators(info, crypto);
         if (
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
                         && Build.VERSION.SDK_INT < Build.VERSION_CODES.R
@@ -498,7 +499,7 @@ public class BiometricFragment extends Fragment {
         }
 
         // Set or emulate the allowed authenticators option introduced in Android 11 (API 30).
-        @BiometricManager.AuthenticatorTypes final int authenticators =
+        @AuthenticatorTypes final int authenticators =
                 mViewModel.getAllowedAuthenticators();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Api30Impl.setAllowedAuthenticators(builder, authenticators);
@@ -1067,7 +1068,7 @@ public class BiometricFragment extends Fragment {
          */
         static void setAllowedAuthenticators(
                 @NonNull android.hardware.biometrics.BiometricPrompt.Builder builder,
-                @BiometricManager.AuthenticatorTypes int allowedAuthenticators) {
+                @AuthenticatorTypes int allowedAuthenticators) {
             builder.setAllowedAuthenticators(allowedAuthenticators);
         }
     }

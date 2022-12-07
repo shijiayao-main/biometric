@@ -1,6 +1,7 @@
-package com.jiaoay.biometric
+package com.jiaoay.biometric.authentication
 
 import com.jiaoay.biometric.BiometricPrompt.AuthenticationResultType
+import com.jiaoay.biometric.crypto.CryptoObject
 
 /**
  * A container for data passed to {@link AuthenticationCallback#onAuthenticationSucceeded(

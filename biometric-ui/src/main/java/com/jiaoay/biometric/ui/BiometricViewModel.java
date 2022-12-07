@@ -10,15 +10,15 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import com.jiaoay.biometric.AuthenticationCallback;
-import com.jiaoay.biometric.AuthenticationCallbackProvider;
-import com.jiaoay.biometric.AuthenticationResult;
+import com.jiaoay.biometric.authentication.AuthenticationCallback;
+import com.jiaoay.biometric.authentication.AuthenticationCallbackProvider;
+import com.jiaoay.biometric.authentication.AuthenticationResult;
 import com.jiaoay.biometric.AuthenticatorUtils;
 import com.jiaoay.biometric.BiometricErrorData;
-import com.jiaoay.biometric.BiometricManager;
+import com.jiaoay.biometric.manager.AuthenticatorTypes;
 import com.jiaoay.biometric.BiometricPrompt;
-import com.jiaoay.biometric.CancellationSignalProvider;
-import com.jiaoay.biometric.CryptoObject;
+import com.jiaoay.biometric.cancellation.CancellationSignalProvider;
+import com.jiaoay.biometric.crypto.CryptoObject;
 import com.jiaoay.biometric.PromptInfo;
 
 import java.lang.ref.WeakReference;
@@ -180,7 +180,7 @@ public class BiometricViewModel extends ViewModel {
      * A label for the negative button shown on the prompt.
      *
      * <p>If set, this value overrides the one returned by
-     * {@link BiometricPrompt.PromptInfo#getNegativeButtonText()}.
+     * {@link PromptInfo#getNegativeButtonText()}.
      */
     @Nullable
     private CharSequence mNegativeButtonTextOverride;
@@ -395,7 +395,7 @@ public class BiometricViewModel extends ViewModel {
      * the prompt, or 0 if not set.
      */
     @SuppressWarnings("deprecation")
-    @BiometricManager.AuthenticatorTypes
+    @AuthenticatorTypes
     int getAllowedAuthenticators() {
         return mPromptInfo != null
                 ? AuthenticatorUtils.getConsolidatedAuthenticators(mPromptInfo, mCryptoObject)
@@ -640,7 +640,7 @@ public class BiometricViewModel extends ViewModel {
     @SuppressWarnings("WeakerAccess") /* synthetic access */
     @BiometricPrompt.AuthenticationResultType
     int getInferredAuthenticationResultType() {
-        @BiometricManager.AuthenticatorTypes final int authenticators = getAllowedAuthenticators();
+        @AuthenticatorTypes final int authenticators = getAllowedAuthenticators();
         if (
                 AuthenticatorUtils.isSomeBiometricAllowed(authenticators)
                         && !AuthenticatorUtils.isDeviceCredentialAllowed(authenticators)
