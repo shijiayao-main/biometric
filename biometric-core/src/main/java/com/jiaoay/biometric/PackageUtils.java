@@ -11,7 +11,7 @@ import androidx.annotation.RequiresApi;
 /**
  * Utilities related to the system {@link PackageManager}.
  */
-class PackageUtils {
+public class PackageUtils {
     // Prevent instantiation.
     private PackageUtils() {}
 
@@ -21,7 +21,7 @@ class PackageUtils {
      * @param context The application or activity context.
      * @return Whether fingerprint is supported.
      */
-    static boolean hasSystemFeatureFingerprint(@Nullable Context context) {
+    public static boolean hasSystemFeatureFingerprint(@Nullable Context context) {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
                 && context != null
                 && context.getPackageManager() != null

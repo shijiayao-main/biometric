@@ -12,41 +12,46 @@ import androidx.annotation.RequiresApi;
  * {@link androidx.core.hardware.fingerprint.FingerprintManagerCompat}.
  */
 @SuppressWarnings("deprecation")
+public
 class AuthenticationCallbackProvider {
     /**
      * A listener object that can receive events from either
      * {@link android.hardware.biometrics.BiometricPrompt.AuthenticationCallback} or
      * {@link androidx.core.hardware.fingerprint.FingerprintManagerCompat.AuthenticationCallback}.
      */
-    static class Listener {
+    public static class Listener {
         /**
-         * See {@link BiometricPrompt.AuthenticationCallback#onAuthenticationSucceeded(
-         * BiometricPrompt.AuthenticationResult)}.
+         * See {@link AuthenticationCallback#onAuthenticationSucceeded(
+         *AuthenticationResult)}.
          *
          * @param result An object containing authentication-related data.
          */
-        void onSuccess(@NonNull BiometricPrompt.AuthenticationResult result) {}
+        public void onSuccess(@NonNull AuthenticationResult result) {
+        }
 
         /**
-         * See {@link BiometricPrompt.AuthenticationCallback#onAuthenticationError(int,
+         * See {@link AuthenticationCallback#onAuthenticationError(int,
          * CharSequence)}.
          *
          * @param errorCode    An integer ID associated with the error.
          * @param errorMessage A human-readable message that describes the error.
          */
-        void onError(int errorCode, @Nullable CharSequence errorMessage) {}
+        public void onError(int errorCode, @Nullable CharSequence errorMessage) {
+        }
 
         /**
          * Called when a recoverable error/event has been encountered during authentication.
          *
          * @param helpMessage A human-readable message that describes the event.
          */
-        void onHelp(@Nullable CharSequence helpMessage) {}
+        public void onHelp(@Nullable CharSequence helpMessage) {
+        }
 
         /**
-         * See {@link BiometricPrompt.AuthenticationCallback#onAuthenticationFailed()}.
+         * See {@link AuthenticationCallback#onAuthenticationFailed()}.
          */
-        void onFailure() {}
+        public void onFailure() {
+        }
     }
 
     /**
@@ -76,7 +81,7 @@ class AuthenticationCallbackProvider {
      *
      * @param listener A listener that will receive authentication events.
      */
-    AuthenticationCallbackProvider(@NonNull Listener listener) {
+    public AuthenticationCallbackProvider(@NonNull Listener listener) {
         mListener = listener;
     }
 
@@ -92,7 +97,7 @@ class AuthenticationCallbackProvider {
      */
     @RequiresApi(Build.VERSION_CODES.P)
     @NonNull
-    android.hardware.biometrics.BiometricPrompt.AuthenticationCallback getBiometricCallback() {
+    public android.hardware.biometrics.BiometricPrompt.AuthenticationCallback getBiometricCallback() {
         if (mBiometricCallback == null) {
             mBiometricCallback = Api28Impl.createCallback(mListener);
         }
@@ -110,8 +115,8 @@ class AuthenticationCallbackProvider {
      * {@link androidx.core.hardware.fingerprint.FingerprintManagerCompat}.
      */
     @NonNull
-    androidx.core.hardware.fingerprint.FingerprintManagerCompat.AuthenticationCallback
-            getFingerprintCallback() {
+    public androidx.core.hardware.fingerprint.FingerprintManagerCompat.AuthenticationCallback
+    getFingerprintCallback() {
         if (mFingerprintCallback == null) {
             mFingerprintCallback = new androidx.core.hardware.fingerprint.FingerprintManagerCompat
                     .AuthenticationCallback() {
@@ -129,13 +134,13 @@ class AuthenticationCallbackProvider {
                 public void onAuthenticationSucceeded(final androidx.core.hardware.fingerprint
                         .FingerprintManagerCompat.AuthenticationResult result) {
 
-                    final BiometricPrompt.CryptoObject crypto = result != null
+                    final CryptoObject crypto = result != null
                             ? CryptoObjectUtils.unwrapFromFingerprintManager(
-                                    result.getCryptoObject())
+                            result.getCryptoObject())
                             : null;
 
-                    final BiometricPrompt.AuthenticationResult resultCompat =
-                            new BiometricPrompt.AuthenticationResult(
+                    final AuthenticationResult resultCompat =
+                            new AuthenticationResult(
                                     crypto, BiometricPrompt.AUTHENTICATION_RESULT_TYPE_BIOMETRIC);
 
                     mListener.onSuccess(resultCompat);
@@ -156,7 +161,8 @@ class AuthenticationCallbackProvider {
     @RequiresApi(Build.VERSION_CODES.R)
     private static class Api30Impl {
         // Prevent instantiation.
-        private Api30Impl() {}
+        private Api30Impl() {
+        }
 
         /**
          * Gets the authentication type from the given framework authentication result.
@@ -169,7 +175,8 @@ class AuthenticationCallbackProvider {
          */
         @BiometricPrompt.AuthenticationResultType
         static int getAuthenticationType(
-                @NonNull android.hardware.biometrics.BiometricPrompt.AuthenticationResult result) {
+                @NonNull android.hardware.biometrics.BiometricPrompt.AuthenticationResult result
+        ) {
             return result.getAuthenticationType();
         }
     }
@@ -180,7 +187,8 @@ class AuthenticationCallbackProvider {
     @RequiresApi(Build.VERSION_CODES.P)
     private static class Api28Impl {
         // Prevent instantiation.
-        private Api28Impl() {}
+        private Api28Impl() {
+        }
 
         /**
          * Creates a {@link android.hardware.biometrics.BiometricPrompt.AuthenticationCallback} that
@@ -207,9 +215,10 @@ class AuthenticationCallbackProvider {
 
                 @Override
                 public void onAuthenticationSucceeded(
-                        android.hardware.biometrics.BiometricPrompt.AuthenticationResult result) {
+                        android.hardware.biometrics.BiometricPrompt.AuthenticationResult result
+                ) {
 
-                    final BiometricPrompt.CryptoObject crypto = result != null
+                    final CryptoObject crypto = result != null
                             ? CryptoObjectUtils.unwrapFromBiometricPrompt(result.getCryptoObject())
                             : null;
 
@@ -224,8 +233,7 @@ class AuthenticationCallbackProvider {
                         authenticationType = BiometricPrompt.AUTHENTICATION_RESULT_TYPE_BIOMETRIC;
                     }
 
-                    final BiometricPrompt.AuthenticationResult resultCompat =
-                            new BiometricPrompt.AuthenticationResult(crypto, authenticationType);
+                    final AuthenticationResult resultCompat = new AuthenticationResult(crypto, authenticationType);
 
                     listener.onSuccess(resultCompat);
                 }

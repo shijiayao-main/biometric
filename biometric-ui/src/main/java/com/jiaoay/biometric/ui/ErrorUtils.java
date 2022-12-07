@@ -1,4 +1,4 @@
-package com.jiaoay.biometric;
+package com.jiaoay.biometric.ui;
 
 import android.content.Context;
 import android.util.Log;
@@ -6,10 +6,13 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.jiaoay.biometric.BiometricPrompt;
+import com.jiaoay.biometric_ui.R;
+
 /**
  * Utilities related to biometric authentication errors.
  */
-class ErrorUtils {
+public class ErrorUtils {
     // Prevent instantiation.
     private ErrorUtils() {}
 
@@ -19,7 +22,7 @@ class ErrorUtils {
      * @param errorCode An integer ID associated with the error.
      * @return Whether the error code matches a known error.
      */
-    static boolean isKnownError(int errorCode) {
+    public static boolean isKnownError(int errorCode) {
         switch (errorCode) {
             case BiometricPrompt.ERROR_HW_UNAVAILABLE:
             case BiometricPrompt.ERROR_UNABLE_TO_PROCESS:
@@ -48,7 +51,7 @@ class ErrorUtils {
      * @param errorCode An integer ID associated with the error.
      * @return Whether the error code indicates that the user has been locked out.
      */
-    static boolean isLockoutError(int errorCode) {
+    public static boolean isLockoutError(int errorCode) {
         return errorCode == BiometricPrompt.ERROR_LOCKOUT
                 || errorCode == BiometricPrompt.ERROR_LOCKOUT_PERMANENT;
     }
@@ -58,7 +61,7 @@ class ErrorUtils {
      * in FingerprintManager
      */
     @NonNull
-    static String getFingerprintErrorString(@Nullable Context context, int errorCode) {
+    public static String getFingerprintErrorString(@Nullable Context context, int errorCode) {
         if (context == null) {
             return "";
         }

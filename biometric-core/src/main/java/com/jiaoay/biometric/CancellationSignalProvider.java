@@ -15,6 +15,7 @@ import androidx.annotation.VisibleForTesting;
  * {@link androidx.core.hardware.fingerprint.FingerprintManagerCompat}.
  */
 @SuppressWarnings("deprecation")
+public
 class CancellationSignalProvider {
     private static final String TAG = "CancelSignalProvider";
 
@@ -63,7 +64,7 @@ class CancellationSignalProvider {
     /**
      * Creates a new cancellation signal provider instance.
      */
-    CancellationSignalProvider() {
+    public CancellationSignalProvider() {
         mInjector = new Injector() {
             @Override
             @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
@@ -102,7 +103,7 @@ class CancellationSignalProvider {
      */
     @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @NonNull
-    CancellationSignal getBiometricCancellationSignal() {
+    public CancellationSignal getBiometricCancellationSignal() {
         if (mBiometricCancellationSignal == null) {
             mBiometricCancellationSignal = mInjector.getBiometricCancellationSignal();
         }
@@ -120,7 +121,7 @@ class CancellationSignalProvider {
      *  {@link androidx.core.hardware.fingerprint.FingerprintManagerCompat}.
      */
     @NonNull
-    androidx.core.os.CancellationSignal getFingerprintCancellationSignal() {
+    public androidx.core.os.CancellationSignal getFingerprintCancellationSignal() {
         if (mFingerprintCancellationSignal == null) {
             mFingerprintCancellationSignal = mInjector.getFingerprintCancellationSignal();
         }
@@ -130,7 +131,7 @@ class CancellationSignalProvider {
     /**
      * Invokes cancel for all cached cancellation signal objects and clears any references to them.
      */
-    void cancel() {
+    public void cancel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN
                 && mBiometricCancellationSignal != null) {
             try {

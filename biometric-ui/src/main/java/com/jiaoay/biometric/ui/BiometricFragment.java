@@ -1,4 +1,4 @@
-package com.jiaoay.biometric;
+package com.jiaoay.biometric.ui;
 
 import android.app.Activity;
 import android.app.KeyguardManager;
@@ -18,12 +18,26 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
-import com.jiaoay.biometric.BiometricManager.Authenticators;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+
+import com.jiaoay.biometric.AuthenticationCallback;
+import com.jiaoay.biometric.AuthenticationResult;
+import com.jiaoay.biometric.AuthenticatorUtils;
+import com.jiaoay.biometric.BiometricErrorData;
+import com.jiaoay.biometric.BiometricManager;
+import com.jiaoay.biometric.BiometricManager.Authenticators;
+import com.jiaoay.biometric.BiometricPrompt;
+import com.jiaoay.biometric.BiometricUtil;
+import com.jiaoay.biometric.CryptoObject;
+import com.jiaoay.biometric.CryptoObjectUtils;
+import com.jiaoay.biometric.KeyguardUtils;
+import com.jiaoay.biometric.PackageUtils;
+import com.jiaoay.biometric.PromptInfo;
+import com.jiaoay.biometric_ui.R;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -33,8 +47,6 @@ import java.util.concurrent.Executor;
 /**
  * A fragment that hosts the system-dependent UI for {@link BiometricPrompt} and coordinates logic
  * for the ongoing authentication session across device configuration changes.
- *
- * @hide
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class BiometricFragment extends Fragment {
@@ -57,7 +69,7 @@ public class BiometricFragment extends Fragment {
 
     /**
      * Authentication was canceled by the client application via
-     * {@link BiometricPrompt#cancelAuthentication()}.
+     * {@link BiometricDialogManager#cancelAuthentication()}.
      */
     static final int CANCELED_FROM_CLIENT = 3;
 
@@ -65,20 +77,21 @@ public class BiometricFragment extends Fragment {
      * Where authentication was canceled from.
      */
     @IntDef({
-        CANCELED_FROM_INTERNAL,
-        CANCELED_FROM_USER,
-        CANCELED_FROM_NEGATIVE_BUTTON,
-        CANCELED_FROM_CLIENT
+            CANCELED_FROM_INTERNAL,
+            CANCELED_FROM_USER,
+            CANCELED_FROM_NEGATIVE_BUTTON,
+            CANCELED_FROM_CLIENT
     })
     @Retention(RetentionPolicy.SOURCE)
-    @interface CanceledFrom {}
+    @interface CanceledFrom {
+    }
 
     /**
      * Tag used to identify the {@link FingerprintDialogFragment} attached to the client
      * activity/fragment.
      */
     private static final String FINGERPRINT_DIALOG_FRAGMENT_TAG =
-            "com.jiaoay.biometric.FingerprintDialogFragment";
+            "com.jiaoay.biometric.ui.FingerprintDialogFragment";
 
     /**
      * The amount of time (in milliseconds) before the flag indicating whether to dismiss the
@@ -89,7 +102,7 @@ public class BiometricFragment extends Fragment {
     /**
      * The amount of time (in milliseconds) to wait before dismissing the fingerprint dialog after
      * encountering an error. Ignored if
-     * {@link DeviceUtils#shouldHideFingerprintDialog(Context, String)} is {@code true}.
+     * {@link BiometricUtil#shouldHideFingerprintDialog(Context, String)} is {@code true}.
      */
     private static final int HIDE_DIALOG_DELAY_MS = 2000;
 
@@ -112,7 +125,8 @@ public class BiometricFragment extends Fragment {
         private final Handler mPromptHandler = new Handler(Looper.getMainLooper());
 
         @SuppressWarnings("WeakerAccess") /* synthetic access */
-        PromptExecutor() {}
+        PromptExecutor() {
+        }
 
         @Override
         public void execute(@NonNull Runnable runnable) {
@@ -125,7 +139,8 @@ public class BiometricFragment extends Fragment {
      * {@link #showPromptForAuthentication()}.
      */
     private static class ShowPromptForAuthenticationRunnable implements Runnable {
-        @NonNull private final WeakReference<BiometricFragment> mFragmentRef;
+        @NonNull
+        private final WeakReference<BiometricFragment> mFragmentRef;
 
         @SuppressWarnings("WeakerAccess") /* synthetic access */
         ShowPromptForAuthenticationRunnable(@Nullable BiometricFragment fragment) {
@@ -145,7 +160,8 @@ public class BiometricFragment extends Fragment {
      * {@link BiometricViewModel#setDelayingPrompt(boolean)} with a value of {@code false}.
      */
     private static class StopDelayingPromptRunnable implements Runnable {
-        @NonNull private final WeakReference<BiometricViewModel> mViewModelRef;
+        @NonNull
+        private final WeakReference<BiometricViewModel> mViewModelRef;
 
         @SuppressWarnings("WeakerAccess") /* synthetic access */
         StopDelayingPromptRunnable(@Nullable BiometricViewModel viewModel) {
@@ -165,7 +181,8 @@ public class BiometricFragment extends Fragment {
      * {@link BiometricViewModel#setIgnoringCancel(boolean)} with a value of {@code false}.
      */
     private static class StopIgnoringCancelRunnable implements Runnable {
-        @NonNull private final WeakReference<BiometricViewModel> mViewModelRef;
+        @NonNull
+        private final WeakReference<BiometricViewModel> mViewModelRef;
 
         @SuppressWarnings("WeakerAccess") /* synthetic access */
         StopIgnoringCancelRunnable(@Nullable BiometricViewModel viewModel) {
@@ -183,12 +200,14 @@ public class BiometricFragment extends Fragment {
     /**
      * A handler used to post delayed events.
      */
-    @VisibleForTesting Handler mHandler = new Handler(Looper.getMainLooper());
+    @VisibleForTesting
+    Handler mHandler = new Handler(Looper.getMainLooper());
 
     /**
      * The view model for the ongoing authentication session.
      */
-    @VisibleForTesting BiometricViewModel mViewModel;
+    @VisibleForTesting
+    BiometricViewModel mViewModel;
 
     /**
      * Creates a new instance of {@link BiometricFragment}.
@@ -213,7 +232,7 @@ public class BiometricFragment extends Fragment {
         // signal immediately after it's shown (b/162022588).
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q
                 && AuthenticatorUtils.isDeviceCredentialAllowed(
-                        mViewModel.getAllowedAuthenticators())) {
+                mViewModel.getAllowedAuthenticators())) {
             mViewModel.setIgnoringCancel(true);
             mHandler.postDelayed(new StopIgnoringCancelRunnable(mViewModel), 250L);
         }
@@ -252,14 +271,10 @@ public class BiometricFragment extends Fragment {
 
         mViewModel.getAuthenticationResult().observe(
                 this,
-                new Observer<BiometricPrompt.AuthenticationResult>() {
-                    @Override
-                    public void onChanged(
-                            BiometricPrompt.AuthenticationResult authenticationResult) {
-                        if (authenticationResult != null) {
-                            onAuthenticationSucceeded(authenticationResult);
-                            mViewModel.setAuthenticationResult(null);
-                        }
+                authenticationResult -> {
+                    if (authenticationResult != null) {
+                        onAuthenticationSucceeded(authenticationResult);
+                        mViewModel.setAuthenticationResult(null);
                     }
                 });
 
@@ -271,7 +286,8 @@ public class BiometricFragment extends Fragment {
                         if (authenticationError != null) {
                             onAuthenticationError(
                                     authenticationError.getErrorCode(),
-                                    authenticationError.getErrorMessage());
+                                    authenticationError.getErrorMessage()
+                            );
                             mViewModel.setAuthenticationError(null);
                         }
                     }
@@ -338,8 +354,8 @@ public class BiometricFragment extends Fragment {
      * @param crypto A crypto object to be associated with this authentication.
      */
     void authenticate(
-            @NonNull BiometricPrompt.PromptInfo info,
-            @Nullable BiometricPrompt.CryptoObject crypto) {
+            @NonNull PromptInfo info,
+            @Nullable CryptoObject crypto) {
 
         final FragmentActivity activity = getActivity();
         if (activity == null) {
@@ -350,12 +366,13 @@ public class BiometricFragment extends Fragment {
         mViewModel.setPromptInfo(info);
 
         // Use a fake crypto object to force Strong biometric auth prior to Android 11 (API 30).
-        @BiometricManager.AuthenticatorTypes final int authenticators =
-                AuthenticatorUtils.getConsolidatedAuthenticators(info, crypto);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                && Build.VERSION.SDK_INT < Build.VERSION_CODES.R
-                && authenticators == Authenticators.BIOMETRIC_STRONG
-                && crypto == null) {
+        @BiometricManager.AuthenticatorTypes final int authenticators = AuthenticatorUtils.getConsolidatedAuthenticators(info, crypto);
+        if (
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                        && Build.VERSION.SDK_INT < Build.VERSION_CODES.R
+                        && authenticators == Authenticators.BIOMETRIC_STRONG
+                        && crypto == null
+        ) {
             mViewModel.setCryptoObject(CryptoObjectUtils.createFakeCryptoObject());
         } else {
             mViewModel.setCryptoObject(crypto);
@@ -370,10 +387,7 @@ public class BiometricFragment extends Fragment {
         }
 
         // Fall back to device credential immediately if no known biometrics are available.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
-                && isManagingDeviceCredentialButton()
-                && BiometricManager.from(activity).canAuthenticate(Authenticators.BIOMETRIC_WEAK)
-                        != BiometricManager.BIOMETRIC_SUCCESS) {
+        if (isManagingDeviceCredentialButton() && BiometricManager.from(activity).canAuthenticate(Authenticators.BIOMETRIC_WEAK) != BiometricManager.BIOMETRIC_SUCCESS) {
             mViewModel.setAwaitingResult(true);
             launchConfirmCredentialActivity();
             return;
@@ -427,7 +441,7 @@ public class BiometricFragment extends Fragment {
 
         if (isAdded()) {
             mViewModel.setFingerprintDialogDismissedInstantly(true);
-            if (!DeviceUtils.shouldHideFingerprintDialog(context, Build.MODEL)) {
+            if (!BiometricUtil.shouldHideFingerprintDialog(context, Build.MODEL)) {
                 mHandler.postDelayed(
                         new Runnable() {
                             @Override
@@ -506,7 +520,8 @@ public class BiometricFragment extends Fragment {
     @VisibleForTesting
     void authenticateWithFingerprint(
             @NonNull androidx.core.hardware.fingerprint.FingerprintManagerCompat fingerprintManager,
-            @NonNull Context context) {
+            @NonNull Context context
+    ) {
 
         final androidx.core.hardware.fingerprint.FingerprintManagerCompat.CryptoObject crypto =
                 CryptoObjectUtils.wrapForFingerprintManager(mViewModel.getCryptoObject());
@@ -601,7 +616,7 @@ public class BiometricFragment extends Fragment {
 
         // Wait before showing again to work around a dismissal logic issue on API 29 (b/157783075).
         final Context context = getContext();
-        if (context != null && DeviceUtils.shouldDelayShowingPrompt(context, Build.MODEL)) {
+        if (context != null && BiometricUtil.shouldDelayShowingPrompt(context, Build.MODEL)) {
             mViewModel.setDelayingPrompt(true);
             mHandler.postDelayed(new StopDelayingPromptRunnable(mViewModel), SHOW_PROMPT_DELAY_MS);
         }
@@ -635,7 +650,7 @@ public class BiometricFragment extends Fragment {
      */
     @SuppressWarnings("WeakerAccess") /* synthetic access */
     @VisibleForTesting
-    void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
+    void onAuthenticationSucceeded(@NonNull AuthenticationResult result) {
         sendSuccessAndDismiss(result);
     }
 
@@ -660,7 +675,7 @@ public class BiometricFragment extends Fragment {
                 && context != null
                 && KeyguardUtils.isDeviceSecuredWithCredential(context)
                 && AuthenticatorUtils.isDeviceCredentialAllowed(
-                        mViewModel.getAllowedAuthenticators())) {
+                mViewModel.getAllowedAuthenticators())) {
             launchConfirmCredentialActivity();
             return;
         }
@@ -817,7 +832,7 @@ public class BiometricFragment extends Fragment {
         if (resultCode == Activity.RESULT_OK) {
             // Device credential auth succeeded. This is incompatible with crypto for API <30.
             sendSuccessAndDismiss(
-                    new BiometricPrompt.AuthenticationResult(
+                    new AuthenticationResult(
                             null /* crypto */,
                             BiometricPrompt.AUTHENTICATION_RESULT_TYPE_DEVICE_CREDENTIAL));
         } else {
@@ -845,10 +860,9 @@ public class BiometricFragment extends Fragment {
      * Sends a successful authentication result to the client and dismisses the prompt.
      *
      * @param result An object containing authentication-related data.
-     *
-     * @see #sendSuccessToClient(BiometricPrompt.AuthenticationResult)
+     * @see #sendSuccessToClient(AuthenticationResult)
      */
-    private void sendSuccessAndDismiss(@NonNull BiometricPrompt.AuthenticationResult result) {
+    private void sendSuccessAndDismiss(@NonNull AuthenticationResult result) {
         sendSuccessToClient(result);
         dismiss();
     }
@@ -856,9 +870,8 @@ public class BiometricFragment extends Fragment {
     /**
      * Sends an unrecoverable error result to the client and dismisses the prompt.
      *
-     * @param errorCode An integer ID associated with the error.
+     * @param errorCode   An integer ID associated with the error.
      * @param errorString A human-readable string that describes the error.
-     *
      * @see #sendErrorToClient(int, CharSequence)
      */
     @SuppressWarnings("WeakerAccess") /* synthetic access */
@@ -872,12 +885,11 @@ public class BiometricFragment extends Fragment {
      * Sends a successful authentication result to the client callback.
      *
      * @param result An object containing authentication-related data.
-     *
-     * @see #sendSuccessAndDismiss(BiometricPrompt.AuthenticationResult)
-     * @see BiometricPrompt.AuthenticationCallback#onAuthenticationSucceeded(
-     *      BiometricPrompt.AuthenticationResult)
+     * @see #sendSuccessAndDismiss(AuthenticationResult)
+     * @see AuthenticationCallback#onAuthenticationSucceeded(
+     *AuthenticationResult)
      */
-    private void sendSuccessToClient(@NonNull final BiometricPrompt.AuthenticationResult result) {
+    private void sendSuccessToClient(@NonNull final AuthenticationResult result) {
         if (!mViewModel.isAwaitingResult()) {
             Log.w(TAG, "Success not sent to client. Client is not awaiting a result.");
             return;
@@ -898,9 +910,8 @@ public class BiometricFragment extends Fragment {
      *
      * @param errorCode   An integer ID associated with the error.
      * @param errorString A human-readable string that describes the error.
-     *
      * @see #sendErrorAndDismiss(int, CharSequence)
-     * @see BiometricPrompt.AuthenticationCallback#onAuthenticationError(int, CharSequence)
+     * @see AuthenticationCallback#onAuthenticationError(int, CharSequence)
      */
     private void sendErrorToClient(final int errorCode, @NonNull final CharSequence errorString) {
         if (mViewModel.isConfirmingDeviceCredential()) {
@@ -925,7 +936,7 @@ public class BiometricFragment extends Fragment {
     /**
      * Sends an authentication failure event to the client callback.
      *
-     * @see BiometricPrompt.AuthenticationCallback#onAuthenticationFailed()
+     * @see AuthenticationCallback#onAuthenticationFailed()
      */
     private void sendFailureToClient() {
         if (!mViewModel.isAwaitingResult()) {
@@ -967,7 +978,7 @@ public class BiometricFragment extends Fragment {
     boolean isManagingDeviceCredentialButton() {
         return Build.VERSION.SDK_INT <= Build.VERSION_CODES.P
                 && AuthenticatorUtils.isDeviceCredentialAllowed(
-                        mViewModel.getAllowedAuthenticators());
+                mViewModel.getAllowedAuthenticators());
     }
 
     /**
@@ -987,15 +998,14 @@ public class BiometricFragment extends Fragment {
      * ongoing crypto-based authentication attempt.
      *
      * @return Whether this fragment should display the fingerprint dialog UI.
-     *
-     * @see DeviceUtils#shouldUseFingerprintForCrypto(Context, String, String)
+     * @see BiometricUtil#shouldUseFingerprintForCrypto(Context, String, String)
      */
     private boolean isFingerprintDialogNeededForCrypto() {
         final FragmentActivity activity = getActivity();
         return activity != null
                 && mViewModel.getCryptoObject() != null
-                && DeviceUtils.shouldUseFingerprintForCrypto(
-                        activity, Build.MANUFACTURER, Build.MODEL);
+                && BiometricUtil.shouldUseFingerprintForCrypto(
+                activity, Build.MANUFACTURER, Build.MODEL);
     }
 
     /**
@@ -1003,14 +1013,12 @@ public class BiometricFragment extends Fragment {
      * biometric prompt, to handle an authentication error.
      *
      * @return Whether this fragment should invoke the fingerprint dialog.
-     *
-     * @see DeviceUtils#shouldUseFingerprintForCrypto(Context, String, String)
+     * @see BiometricUtil#shouldUseFingerprintForCrypto(Context, String, String)
      */
     private boolean isFingerprintDialogNeededForErrorHandling() {
         // On API 28, BiometricPrompt internally calls FingerprintManager#getErrorString(), which
         // requires fingerprint hardware to be present (b/151443237).
-        return Build.VERSION.SDK_INT == Build.VERSION_CODES.P
-                && !PackageUtils.hasSystemFeatureFingerprint(getContext());
+        return Build.VERSION.SDK_INT == Build.VERSION_CODES.P && !PackageUtils.hasSystemFeatureFingerprint(getContext());
     }
 
     /**
@@ -1029,14 +1037,14 @@ public class BiometricFragment extends Fragment {
      * fingerprint dialog and forwarding the error to the client.
      *
      * <p>This method respects the result of
-     * {@link DeviceUtils#shouldHideFingerprintDialog(Context, String)} and returns 0 if the latter
+     * {@link BiometricUtil#shouldHideFingerprintDialog(Context, String)} and returns 0 if the latter
      * is {@code true}.
      *
      * @return The delay (in milliseconds) to apply before hiding the fingerprint dialog.
      */
     private int getDismissDialogDelay() {
         Context context = getContext();
-        return context != null && DeviceUtils.shouldHideFingerprintDialog(context, Build.MODEL)
+        return context != null && BiometricUtil.shouldHideFingerprintDialog(context, Build.MODEL)
                 ? 0
                 : HIDE_DIALOG_DELAY_MS;
     }
@@ -1047,7 +1055,8 @@ public class BiometricFragment extends Fragment {
     @RequiresApi(Build.VERSION_CODES.R)
     private static class Api30Impl {
         // Prevent instantiation.
-        private Api30Impl() {}
+        private Api30Impl() {
+        }
 
         /**
          * Sets the allowed authenticator type(s) for the given framework prompt builder.
@@ -1069,7 +1078,8 @@ public class BiometricFragment extends Fragment {
     @RequiresApi(Build.VERSION_CODES.Q)
     private static class Api29Impl {
         // Prevent instantiation.
-        private Api29Impl() {}
+        private Api29Impl() {
+        }
 
         /**
          * Sets the "confirmation required" option for the given framework prompt builder.
@@ -1105,7 +1115,8 @@ public class BiometricFragment extends Fragment {
     @RequiresApi(Build.VERSION_CODES.P)
     private static class Api28Impl {
         // Prevent instantiation.
-        private Api28Impl() {}
+        private Api28Impl() {
+        }
 
         /**
          * Creates an instance of the framework class
@@ -1234,7 +1245,8 @@ public class BiometricFragment extends Fragment {
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     private static class Api21Impl {
         // Prevent instantiation.
-        private Api21Impl() {}
+        private Api21Impl() {
+        }
 
         /**
          * Calls

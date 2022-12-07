@@ -11,7 +11,7 @@ import androidx.annotation.RequiresApi;
 /**
  * Utilities related to the {@link KeyguardManager} system service.
  */
-class KeyguardUtils {
+public class KeyguardUtils {
     // Prevent instantiation.
     private KeyguardUtils() {}
 
@@ -22,7 +22,7 @@ class KeyguardUtils {
      * @return An instance of {@link KeyguardManager}.
      */
     @Nullable
-    static KeyguardManager getKeyguardManager(@NonNull Context context) {
+    public static KeyguardManager getKeyguardManager(@NonNull Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             return Api23Impl.getKeyguardManager(context);
         }
@@ -36,7 +36,7 @@ class KeyguardUtils {
      * @param context The application or activity context.
      * @return Whether a PIN/pattern/password has been set, or {@code false} if unsure.
      */
-    static boolean isDeviceSecuredWithCredential(@NonNull Context context) {
+    public static boolean isDeviceSecuredWithCredential(@NonNull Context context) {
         final KeyguardManager keyguardManager = getKeyguardManager(context);
         if (keyguardManager == null) {
             return false;

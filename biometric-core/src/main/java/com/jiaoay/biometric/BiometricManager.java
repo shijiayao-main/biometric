@@ -96,7 +96,7 @@ public class BiometricManager {
      * authenticators (e.g. {@code DEVICE_CREDENTIAL | BIOMETRIC_WEAK}).
      *
      * @see #canAuthenticate(int)
-     * @see BiometricPrompt.PromptInfo.Builder#setAllowedAuthenticators(int)
+     * @see PromptInfo.Builder#setAllowedAuthenticators(int)
      */
     public interface Authenticators {
         /**
@@ -133,7 +133,7 @@ public class BiometricManager {
         Authenticators.DEVICE_CREDENTIAL
     })
     @Retention(RetentionPolicy.SOURCE)
-    @interface AuthenticatorTypes {}
+    public @interface AuthenticatorTypes {}
 
     /**
      * An injector for various class and method dependencies. Used for testing.

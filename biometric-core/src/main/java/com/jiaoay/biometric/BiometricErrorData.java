@@ -8,7 +8,7 @@ import java.util.Arrays;
  * A container for data associated with a biometric authentication error, which may be handled by
  * the client application's callback.
  */
-class BiometricErrorData {
+public class BiometricErrorData {
     /**
      * An integer ID associated with this error.
      */
@@ -19,18 +19,18 @@ class BiometricErrorData {
      */
     @Nullable private final CharSequence mErrorMessage;
 
-    BiometricErrorData(int errorCode, @Nullable CharSequence errorMessage) {
+    public BiometricErrorData(int errorCode, @Nullable CharSequence errorMessage) {
         mErrorCode = errorCode;
         mErrorMessage = errorMessage;
     }
 
     @BiometricPrompt.AuthenticationError
-    int getErrorCode() {
+    public int getErrorCode() {
         return mErrorCode;
     }
 
     @Nullable
-    CharSequence getErrorMessage() {
+    public CharSequence getErrorMessage() {
         return mErrorMessage;
     }
 

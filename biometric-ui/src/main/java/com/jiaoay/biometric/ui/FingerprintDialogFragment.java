@@ -1,4 +1,4 @@
-package com.jiaoay.biometric;
+package com.jiaoay.biometric.ui;
 
 import android.app.Dialog;
 import android.content.Context;
@@ -23,13 +23,15 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.annotation.RestrictTo;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+
+import com.jiaoay.biometric.AuthenticatorUtils;
+import com.jiaoay.biometric_ui.R;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -40,7 +42,6 @@ import java.lang.annotation.RetentionPolicy;
  *
  * @hide
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY)
 public class FingerprintDialogFragment extends DialogFragment {
     private static final String TAG = "FingerprintFragment";
 
@@ -102,7 +103,7 @@ public class FingerprintDialogFragment extends DialogFragment {
      * The view model for the ongoing authentication session.
      */
     @SuppressWarnings("WeakerAccess") /* synthetic access */
-    BiometricViewModel mViewModel;
+            BiometricViewModel mViewModel;
 
     /**
      * The text color used for displaying error messages.

@@ -9,7 +9,7 @@ import com.jiaoay.biometric.BiometricManager.Authenticators;
 /**
  * Utilities related to {@link Authenticators} constants.
  */
-class AuthenticatorUtils {
+public class AuthenticatorUtils {
     /**
      * A bitmask for the portion of an {@link BiometricManager.AuthenticatorTypes} value related to
      * biometric sensor class.
@@ -44,20 +44,20 @@ class AuthenticatorUtils {
     }
 
     /**
-     * Combines relevant information from the given {@link BiometricPrompt.PromptInfo} and
-     * {@link BiometricPrompt.CryptoObject} to determine which type(s) of authenticators should be
+     * Combines relevant information from the given {@link PromptInfo} and
+     * {@link CryptoObject} to determine which type(s) of authenticators should be
      * allowed for a given authentication session.
      *
-     * @param info   The {@link BiometricPrompt.PromptInfo} for a given authentication session.
-     * @param crypto The {@link BiometricPrompt.CryptoObject} for a given crypto-based
+     * @param info   The {@link PromptInfo} for a given authentication session.
+     * @param crypto The {@link CryptoObject} for a given crypto-based
      *               authentication session, or {@code null} for non-crypto authentication.
      * @return A bit field representing all valid authenticator types that may be invoked.
      */
     @SuppressWarnings("deprecation")
     @BiometricManager.AuthenticatorTypes
-    static int getConsolidatedAuthenticators(
-            @NonNull BiometricPrompt.PromptInfo info,
-            @Nullable BiometricPrompt.CryptoObject crypto) {
+    public static int getConsolidatedAuthenticators(
+            @NonNull PromptInfo info,
+            @Nullable CryptoObject crypto) {
 
         @BiometricManager.AuthenticatorTypes int authenticators;
         if (info.getAllowedAuthenticators() != 0) {
@@ -112,7 +112,7 @@ class AuthenticatorUtils {
      * @param authenticators A bit field representing a set of allowed authenticator types.
      * @return Whether {@link Authenticators#DEVICE_CREDENTIAL} is an allowed authenticator type.
      */
-    static boolean isDeviceCredentialAllowed(
+    public static boolean isDeviceCredentialAllowed(
             @BiometricManager.AuthenticatorTypes int authenticators) {
         return (authenticators & Authenticators.DEVICE_CREDENTIAL) != 0;
     }
@@ -123,7 +123,7 @@ class AuthenticatorUtils {
      * @param authenticators A bit field representing a set of allowed authenticator types.
      * @return Whether the allowed authenticator types include one or more biometric classes.
      */
-    static boolean isSomeBiometricAllowed(@BiometricManager.AuthenticatorTypes int authenticators) {
+    public static boolean isSomeBiometricAllowed(@BiometricManager.AuthenticatorTypes int authenticators) {
         return (authenticators & BIOMETRIC_CLASS_MASK) != 0;
     }
 
@@ -134,7 +134,7 @@ class AuthenticatorUtils {
      * @param authenticators A bit field representing a set of allowed authenticator types.
      * @return Whether {@link Authenticators#BIOMETRIC_WEAK} is an allowed authenticator type.
      */
-    static boolean isWeakBiometricAllowed(@BiometricManager.AuthenticatorTypes int authenticators) {
+    public static boolean isWeakBiometricAllowed(@BiometricManager.AuthenticatorTypes int authenticators) {
         return (authenticators & Authenticators.BIOMETRIC_WEAK) == Authenticators.BIOMETRIC_WEAK;
     }
 }

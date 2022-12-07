@@ -31,7 +31,7 @@ import javax.crypto.SecretKey;
  * Utility class for creating and converting between different types of crypto objects that may be
  * used internally by {@link BiometricPrompt} and {@link BiometricManager}.
  */
-class CryptoObjectUtils {
+public class CryptoObjectUtils {
     private static final String TAG = "CryptoObjectUtils";
 
     /**
@@ -51,11 +51,11 @@ class CryptoObjectUtils {
      * Unwraps a crypto object returned by {@link android.hardware.biometrics.BiometricPrompt}.
      *
      * @param cryptoObject A crypto object from {@link android.hardware.biometrics.BiometricPrompt}.
-     * @return An equivalent {@link BiometricPrompt.CryptoObject} instance.
+     * @return An equivalent {@link CryptoObject} instance.
      */
     @RequiresApi(Build.VERSION_CODES.P)
     @Nullable
-    static BiometricPrompt.CryptoObject unwrapFromBiometricPrompt(
+    static CryptoObject unwrapFromBiometricPrompt(
             @Nullable android.hardware.biometrics.BiometricPrompt.CryptoObject cryptoObject) {
 
         if (cryptoObject == null) {
@@ -64,17 +64,17 @@ class CryptoObjectUtils {
 
         final Cipher cipher = Api28Impl.getCipher(cryptoObject);
         if (cipher != null) {
-            return new BiometricPrompt.CryptoObject(cipher);
+            return new CryptoObject(cipher);
         }
 
         final Signature signature = Api28Impl.getSignature(cryptoObject);
         if (signature != null) {
-            return new BiometricPrompt.CryptoObject(signature);
+            return new CryptoObject(signature);
         }
 
         final Mac mac = Api28Impl.getMac(cryptoObject);
         if (mac != null) {
-            return new BiometricPrompt.CryptoObject(mac);
+            return new CryptoObject(mac);
         }
 
         // Identity credential is only supported on API 30 and above.
@@ -82,7 +82,7 @@ class CryptoObjectUtils {
             final android.security.identity.IdentityCredential identityCredential =
                     Api30Impl.getIdentityCredential(cryptoObject);
             if (identityCredential != null) {
-                return new BiometricPrompt.CryptoObject(identityCredential);
+                return new CryptoObject(identityCredential);
             }
         }
 
@@ -92,14 +92,14 @@ class CryptoObjectUtils {
     /**
      * Wraps a crypto object to be passed to {@link android.hardware.biometrics.BiometricPrompt}.
      *
-     * @param cryptoObject An instance of {@link BiometricPrompt.CryptoObject}.
+     * @param cryptoObject An instance of {@link CryptoObject}.
      * @return An equivalent crypto object that is compatible with
      * {@link android.hardware.biometrics.BiometricPrompt}.
      */
     @RequiresApi(Build.VERSION_CODES.P)
     @Nullable
-    static android.hardware.biometrics.BiometricPrompt.CryptoObject
-            wrapForBiometricPrompt(@Nullable BiometricPrompt.CryptoObject cryptoObject) {
+    public static android.hardware.biometrics.BiometricPrompt.CryptoObject
+            wrapForBiometricPrompt(@Nullable CryptoObject cryptoObject) {
 
         if (cryptoObject == null) {
             return null;
@@ -138,11 +138,11 @@ class CryptoObjectUtils {
      *
      * @param cryptoObject A crypto object from
      *                     {@link androidx.core.hardware.fingerprint.FingerprintManagerCompat}.
-     * @return An equivalent {@link BiometricPrompt.CryptoObject} instance.
+     * @return An equivalent {@link CryptoObject} instance.
      */
     @SuppressWarnings("deprecation")
     @Nullable
-    static BiometricPrompt.CryptoObject unwrapFromFingerprintManager(
+    static CryptoObject unwrapFromFingerprintManager(
             @Nullable androidx.core.hardware.fingerprint.FingerprintManagerCompat.CryptoObject
                     cryptoObject) {
 
@@ -152,17 +152,17 @@ class CryptoObjectUtils {
 
         final Cipher cipher = cryptoObject.getCipher();
         if (cipher != null) {
-            return new BiometricPrompt.CryptoObject(cipher);
+            return new CryptoObject(cipher);
         }
 
         final Signature signature = cryptoObject.getSignature();
         if (signature != null) {
-            return new BiometricPrompt.CryptoObject(signature);
+            return new CryptoObject(signature);
         }
 
         final Mac mac = cryptoObject.getMac();
         if (mac != null) {
-            return new BiometricPrompt.CryptoObject(mac);
+            return new CryptoObject(mac);
         }
 
         return null;
@@ -172,14 +172,14 @@ class CryptoObjectUtils {
      * Wraps a crypto object to be passed to
      * {@link androidx.core.hardware.fingerprint.FingerprintManagerCompat}.
      *
-     * @param cryptoObject An instance of {@link BiometricPrompt.CryptoObject}.
+     * @param cryptoObject An instance of {@link CryptoObject}.
      * @return An equivalent crypto object that is compatible with
      * {@link androidx.core.hardware.fingerprint.FingerprintManagerCompat}.
      */
     @SuppressWarnings("deprecation")
     @Nullable
-    static androidx.core.hardware.fingerprint.FingerprintManagerCompat.CryptoObject
-            wrapForFingerprintManager(@Nullable BiometricPrompt.CryptoObject cryptoObject) {
+    public static androidx.core.hardware.fingerprint.FingerprintManagerCompat.CryptoObject
+            wrapForFingerprintManager(@Nullable CryptoObject cryptoObject) {
 
         if (cryptoObject == null) {
             return null;
@@ -213,15 +213,15 @@ class CryptoObjectUtils {
     }
 
     /**
-     * Creates a {@link BiometricPrompt.CryptoObject} instance that can be passed
+     * Creates a {@link CryptoObject} instance that can be passed
      * to {@link BiometricManager} and {@link BiometricPrompt} in order to force crypto-based
      * authentication behavior.
      *
-     * @return An internal-only instance of {@link BiometricPrompt.CryptoObject}.
+     * @return An internal-only instance of {@link CryptoObject}.
      */
     @RequiresApi(Build.VERSION_CODES.M)
     @Nullable
-    static BiometricPrompt.CryptoObject createFakeCryptoObject() {
+    public static CryptoObject createFakeCryptoObject() {
         try {
             final KeyStore keystore = KeyStore.getInstance(KEYSTORE_INSTANCE);
             keystore.load(null);
@@ -246,7 +246,7 @@ class CryptoObjectUtils {
                     + KeyProperties.ENCRYPTION_PADDING_PKCS7);
             cipher.init(Cipher.ENCRYPT_MODE, secretKey);
 
-            return new BiometricPrompt.CryptoObject(cipher);
+            return new CryptoObject(cipher);
         } catch (NoSuchPaddingException | NoSuchAlgorithmException | CertificateException
                 | KeyStoreException | InvalidKeyException | InvalidAlgorithmParameterException
                 | UnrecoverableKeyException | IOException | NoSuchProviderException e) {

@@ -1,4 +1,4 @@
-package com.jiaoay.biometric;
+package com.jiaoay.biometric.ui;
 
 import android.content.DialogInterface;
 import android.os.Handler;
@@ -9,6 +9,17 @@ import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
+
+import com.jiaoay.biometric.AuthenticationCallback;
+import com.jiaoay.biometric.AuthenticationCallbackProvider;
+import com.jiaoay.biometric.AuthenticationResult;
+import com.jiaoay.biometric.AuthenticatorUtils;
+import com.jiaoay.biometric.BiometricErrorData;
+import com.jiaoay.biometric.BiometricManager;
+import com.jiaoay.biometric.BiometricPrompt;
+import com.jiaoay.biometric.CancellationSignalProvider;
+import com.jiaoay.biometric.CryptoObject;
+import com.jiaoay.biometric.PromptInfo;
 
 import java.lang.ref.WeakReference;
 import java.util.concurrent.Executor;
@@ -57,12 +68,12 @@ public class BiometricViewModel extends ViewModel {
         }
 
         @Override
-        void onSuccess(@NonNull BiometricPrompt.AuthenticationResult result) {
+        public void onSuccess(@NonNull AuthenticationResult result) {
             if (mViewModelRef.get() != null && mViewModelRef.get().isAwaitingResult()) {
                 // Try to infer the authentication type if unknown.
                 if (result.getAuthenticationType()
                         == BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN) {
-                    result = new BiometricPrompt.AuthenticationResult(
+                    result = new AuthenticationResult(
                             result.getCryptoObject(),
                             mViewModelRef.get().getInferredAuthenticationResultType());
                 }
@@ -72,7 +83,7 @@ public class BiometricViewModel extends ViewModel {
         }
 
         @Override
-        void onError(int errorCode, @Nullable CharSequence errorMessage) {
+        public void onError(int errorCode, @Nullable CharSequence errorMessage) {
             if (mViewModelRef.get() != null
                     && !mViewModelRef.get().isConfirmingDeviceCredential()
                     && mViewModelRef.get().isAwaitingResult()) {
@@ -82,14 +93,14 @@ public class BiometricViewModel extends ViewModel {
         }
 
         @Override
-        void onHelp(@Nullable CharSequence helpMessage) {
+        public void onHelp(@Nullable CharSequence helpMessage) {
             if (mViewModelRef.get() != null) {
                 mViewModelRef.get().setAuthenticationHelpMessage(helpMessage);
             }
         }
 
         @Override
-        void onFailure() {
+        public void onFailure() {
             if (mViewModelRef.get() != null && mViewModelRef.get().isAwaitingResult()) {
                 mViewModelRef.get().setAuthenticationFailurePending(true);
             }
@@ -133,19 +144,19 @@ public class BiometricViewModel extends ViewModel {
      * The callback object that will receive authentication events.
      */
     @Nullable
-    private BiometricPrompt.AuthenticationCallback mClientCallback;
+    private AuthenticationCallback mClientCallback;
 
     /**
      * Info about the appearance and behavior of the prompt provided by the client application.
      */
     @Nullable
-    private BiometricPrompt.PromptInfo mPromptInfo;
+    private PromptInfo mPromptInfo;
 
     /**
      * The crypto object associated with the current authentication session.
      */
     @Nullable
-    private BiometricPrompt.CryptoObject mCryptoObject;
+    private CryptoObject mCryptoObject;
 
     /**
      * A provider for cross-platform compatible authentication callbacks.
@@ -209,7 +220,7 @@ public class BiometricViewModel extends ViewModel {
      * Information associated with a successful authentication attempt.
      */
     @Nullable
-    private MutableLiveData<BiometricPrompt.AuthenticationResult> mAuthenticationResult;
+    private MutableLiveData<AuthenticationResult> mAuthenticationResult;
 
     /**
      * Information associated with an unrecoverable authentication error.
@@ -274,15 +285,15 @@ public class BiometricViewModel extends ViewModel {
     }
 
     @NonNull
-    BiometricPrompt.AuthenticationCallback getClientCallback() {
+    AuthenticationCallback getClientCallback() {
         if (mClientCallback == null) {
-            mClientCallback = new BiometricPrompt.AuthenticationCallback() {
+            mClientCallback = new AuthenticationCallback() {
             };
         }
         return mClientCallback;
     }
 
-    void setClientCallback(@NonNull BiometricPrompt.AuthenticationCallback clientCallback) {
+    void setClientCallback(@NonNull AuthenticationCallback clientCallback) {
         mClientCallback = clientCallback;
     }
 
@@ -293,15 +304,15 @@ public class BiometricViewModel extends ViewModel {
         mClientCallback = null;
     }
 
-    void setPromptInfo(@Nullable BiometricPrompt.PromptInfo promptInfo) {
+    void setPromptInfo(@Nullable PromptInfo promptInfo) {
         mPromptInfo = promptInfo;
     }
 
     /**
      * Gets the title to be shown on the biometric prompt.
      *
-     * <p>This method relies on the {@link BiometricPrompt.PromptInfo} set by
-     * {@link #setPromptInfo(BiometricPrompt.PromptInfo)}.
+     * <p>This method relies on the {@link PromptInfo} set by
+     * {@link #setPromptInfo(PromptInfo)}.
      *
      * @return The title for the prompt, or {@code null} if not set.
      */
@@ -313,8 +324,8 @@ public class BiometricViewModel extends ViewModel {
     /**
      * Gets the subtitle to be shown on the biometric prompt.
      *
-     * <p>This method relies on the {@link BiometricPrompt.PromptInfo} set by
-     * {@link #setPromptInfo(BiometricPrompt.PromptInfo)}.
+     * <p>This method relies on the {@link PromptInfo} set by
+     * {@link #setPromptInfo(PromptInfo)}.
      *
      * @return The subtitle for the prompt, or {@code null} if not set.
      */
@@ -326,8 +337,8 @@ public class BiometricViewModel extends ViewModel {
     /**
      * Gets the description to be shown on the biometric prompt.
      *
-     * <p>This method relies on the {@link BiometricPrompt.PromptInfo} set by
-     * {@link #setPromptInfo(BiometricPrompt.PromptInfo)}.
+     * <p>This method relies on the {@link PromptInfo} set by
+     * {@link #setPromptInfo(PromptInfo)}.
      *
      * @return The description for the prompt, or {@code null} if not set.
      */
@@ -341,9 +352,9 @@ public class BiometricViewModel extends ViewModel {
      *
      * <p>If non-null, the value set by {@link #setNegativeButtonTextOverride(CharSequence)} is
      * used. Otherwise, falls back to the value returned by
-     * {@link BiometricPrompt.PromptInfo#getNegativeButtonText()}, or {@code null} if a non-null
-     * {@link BiometricPrompt.PromptInfo} has not been set by
-     * {@link #setPromptInfo(BiometricPrompt.PromptInfo)}.
+     * {@link PromptInfo#getNegativeButtonText()}, or {@code null} if a non-null
+     * {@link PromptInfo} has not been set by
+     * {@link #setPromptInfo(PromptInfo)}.
      *
      * @return The negative button text for the prompt, or {@code null} if not set.
      */
@@ -361,8 +372,8 @@ public class BiometricViewModel extends ViewModel {
     /**
      * Checks if the confirmation required option is enabled for the biometric prompt.
      *
-     * <p>This method relies on the {@link BiometricPrompt.PromptInfo} set by
-     * {@link #setPromptInfo(BiometricPrompt.PromptInfo)}.
+     * <p>This method relies on the {@link PromptInfo} set by
+     * {@link #setPromptInfo(PromptInfo)}.
      *
      * @return Whether the confirmation required option is enabled.
      */
@@ -373,11 +384,11 @@ public class BiometricViewModel extends ViewModel {
     /**
      * Gets the type(s) of authenticators that may be invoked by the biometric prompt.
      *
-     * <p>If a non-null {@link BiometricPrompt.PromptInfo} has been set by
-     * {@link #setPromptInfo(BiometricPrompt.PromptInfo)}, this is the single consolidated set of
+     * <p>If a non-null {@link PromptInfo} has been set by
+     * {@link #setPromptInfo(PromptInfo)}, this is the single consolidated set of
      * authenticators allowed by the prompt, taking into account the values of
-     * {@link BiometricPrompt.PromptInfo#getAllowedAuthenticators()},
-     * {@link BiometricPrompt.PromptInfo#isDeviceCredentialAllowed()}, and
+     * {@link PromptInfo#getAllowedAuthenticators()},
+     * {@link PromptInfo#isDeviceCredentialAllowed()}, and
      * {@link #getCryptoObject()}.
      *
      * @return A bit field representing all valid authenticator types that may be invoked by
@@ -392,11 +403,11 @@ public class BiometricViewModel extends ViewModel {
     }
 
     @Nullable
-    BiometricPrompt.CryptoObject getCryptoObject() {
+    CryptoObject getCryptoObject() {
         return mCryptoObject;
     }
 
-    void setCryptoObject(@Nullable BiometricPrompt.CryptoObject cryptoObject) {
+    void setCryptoObject(@Nullable CryptoObject cryptoObject) {
         mCryptoObject = cryptoObject;
     }
 
@@ -478,7 +489,7 @@ public class BiometricViewModel extends ViewModel {
     }
 
     @NonNull
-    LiveData<BiometricPrompt.AuthenticationResult> getAuthenticationResult() {
+    LiveData<AuthenticationResult> getAuthenticationResult() {
         if (mAuthenticationResult == null) {
             mAuthenticationResult = new MutableLiveData<>();
         }
@@ -486,7 +497,7 @@ public class BiometricViewModel extends ViewModel {
     }
 
     void setAuthenticationResult(
-            @Nullable BiometricPrompt.AuthenticationResult authenticationResult) {
+            @Nullable AuthenticationResult authenticationResult) {
         if (mAuthenticationResult == null) {
             mAuthenticationResult = new MutableLiveData<>();
         }
@@ -630,8 +641,10 @@ public class BiometricViewModel extends ViewModel {
     @BiometricPrompt.AuthenticationResultType
     int getInferredAuthenticationResultType() {
         @BiometricManager.AuthenticatorTypes final int authenticators = getAllowedAuthenticators();
-        if (AuthenticatorUtils.isSomeBiometricAllowed(authenticators)
-                && !AuthenticatorUtils.isDeviceCredentialAllowed(authenticators)) {
+        if (
+                AuthenticatorUtils.isSomeBiometricAllowed(authenticators)
+                        && !AuthenticatorUtils.isDeviceCredentialAllowed(authenticators)
+        ) {
             return BiometricPrompt.AUTHENTICATION_RESULT_TYPE_BIOMETRIC;
         }
         return BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN;
