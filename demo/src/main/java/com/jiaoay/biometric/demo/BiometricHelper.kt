@@ -117,15 +117,6 @@ class BiometricHelper(private val activity: FragmentActivity) {
                     authenticate(promptInfo, it)
                 } ?: authenticate(promptInfo)
             }
-//            BiometricPrompt(
-//                activity,
-//                ContextCompat.getMainExecutor(activity),
-//                authenticationCallback
-//            ).apply {
-//                crypto?.also {
-//                    authenticate(promptInfo, it)
-//                } ?: authenticate(promptInfo)
-//            }
         }
     }
 

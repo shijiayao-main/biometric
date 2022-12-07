@@ -5,11 +5,12 @@ import android.util.Log
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModelProvider
-import com.jiaoay.biometric.authentication.AuthenticationCallback
 import com.jiaoay.biometric.AuthenticatorUtils
-import com.jiaoay.biometric.manager.AuthenticatorTypes
-import com.jiaoay.biometric.crypto.CryptoObject
 import com.jiaoay.biometric.PromptInfo
+import com.jiaoay.biometric.authentication.AuthenticationCallback
+import com.jiaoay.biometric.crypto.CryptoObject
+import com.jiaoay.biometric.manager.AuthenticatorTypes
+import com.jiaoay.biometric.ui.fragment.BiometricFragment
 
 class BiometricDialogManager(
     private val activity: FragmentActivity,
@@ -23,7 +24,7 @@ class BiometricDialogManager(
         /**
          * Tag used to identify the [BiometricFragment] attached to the client activity/fragment.
          */
-        private const val BIOMETRIC_FRAGMENT_TAG = "com.jiaoay.biometric.ui.BiometricFragment"
+        private const val BIOMETRIC_FRAGMENT_TAG = "com.jiaoay.biometric.ui.fragment.BiometricFragment"
     }
 
     init {
@@ -37,7 +38,7 @@ class BiometricDialogManager(
 //        if (executor != null) {
 //            viewModel.setClientExecutor(executor)
 //        }
-        viewModel.setClientCallback(callback)
+        viewModel.clientCallback = callback
     }
 
     /**
@@ -116,7 +117,7 @@ class BiometricDialogManager(
      * @see .authenticate
      */
     fun authenticate(info: PromptInfo) {
-        authenticateInternal(info, null /* crypto */)
+        authenticateInternal(info = info, crypto = null)
     }
 
     /**

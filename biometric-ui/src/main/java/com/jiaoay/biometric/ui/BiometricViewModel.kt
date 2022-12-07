@@ -1,133 +1,123 @@
-package com.jiaoay.biometric.ui;
+package com.jiaoay.biometric.ui
 
-import android.content.DialogInterface;
-import android.os.Handler;
-import android.os.Looper;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
-
-import com.jiaoay.biometric.authentication.AuthenticationCallback;
-import com.jiaoay.biometric.authentication.AuthenticationCallbackProvider;
-import com.jiaoay.biometric.authentication.AuthenticationResult;
-import com.jiaoay.biometric.AuthenticatorUtils;
-import com.jiaoay.biometric.BiometricErrorData;
-import com.jiaoay.biometric.manager.AuthenticatorTypes;
-import com.jiaoay.biometric.BiometricPrompt;
-import com.jiaoay.biometric.cancellation.CancellationSignalProvider;
-import com.jiaoay.biometric.crypto.CryptoObject;
-import com.jiaoay.biometric.PromptInfo;
-
-import java.lang.ref.WeakReference;
-import java.util.concurrent.Executor;
+import android.content.DialogInterface
+import android.os.Handler
+import android.os.Looper
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import com.jiaoay.biometric.AuthenticatorUtils.getConsolidatedAuthenticators
+import com.jiaoay.biometric.AuthenticatorUtils.isDeviceCredentialAllowed
+import com.jiaoay.biometric.AuthenticatorUtils.isSomeBiometricAllowed
+import com.jiaoay.biometric.BiometricErrorData
+import com.jiaoay.biometric.BiometricPrompt
+import com.jiaoay.biometric.BiometricPrompt.AuthenticationResultType
+import com.jiaoay.biometric.PromptInfo
+import com.jiaoay.biometric.authentication.AuthenticationCallback
+import com.jiaoay.biometric.authentication.AuthenticationCallbackProvider
+import com.jiaoay.biometric.authentication.AuthenticationResult
+import com.jiaoay.biometric.cancellation.CancellationSignalProvider
+import com.jiaoay.biometric.crypto.CryptoObject
+import com.jiaoay.biometric.manager.AuthenticatorTypes
+import com.jiaoay.biometric.ui.fragment.BiometricFragment.CanceledFrom
+import com.jiaoay.biometric.ui.fingerprint.FingerprintDialogFragment
+import com.jiaoay.biometric.ui.fragment.BiometricFragment
+import java.lang.ref.WeakReference
+import java.util.concurrent.Executor
 
 /**
  * A container for data associated with an ongoing authentication session, including intermediate
  * values needed to display the prompt UI.
  *
- * <p>This model and all of its data is persisted over the lifetime of the client activity that
- * hosts the {@link BiometricPrompt}.
+ *
+ * This model and all of its data is persisted over the lifetime of the client activity that
+ * hosts the [BiometricPrompt].
  */
-public class BiometricViewModel extends ViewModel {
+class BiometricViewModel : ViewModel() {
     /**
-     * The default executor provided when {@link #getClientExecutor()} is called before
-     * {@link #setClientExecutor(Executor)}.
+     * The default executor provided when [.getClientExecutor] is called before
+     * [.setClientExecutor].
      */
-    private static class DefaultExecutor implements Executor {
-        private final Handler mHandler = new Handler(Looper.getMainLooper());
-
-        @SuppressWarnings("WeakerAccess") /* synthetic access */
-        DefaultExecutor() {
-        }
-
-        @Override
-        public void execute(Runnable runnable) {
-            mHandler.post(runnable);
+    private class DefaultExecutor internal constructor() : Executor {
+        private val mHandler = Handler(Looper.getMainLooper())
+        override fun execute(runnable: Runnable) {
+            mHandler.post(runnable)
         }
     }
 
     /**
-     * The authentication callback listener passed to {@link AuthenticationCallbackProvider} when
-     * {@link #getAuthenticationCallbackProvider()} is called.
+     * The authentication callback listener passed to [AuthenticationCallbackProvider] when
+     * [.getAuthenticationCallbackProvider] is called.
      */
-    private static final class CallbackListener extends AuthenticationCallbackProvider.Listener {
-        @NonNull
-        private final WeakReference<BiometricViewModel> mViewModelRef;
+    private class CallbackListener internal constructor(viewModel: BiometricViewModel?) : AuthenticationCallbackProvider.Listener() {
+        private val mViewModelRef: WeakReference<BiometricViewModel?>
 
         /**
          * Creates a callback listener with a weak reference to the given view model.
          *
          * @param viewModel The view model instance to hold a weak reference to.
          */
-        @SuppressWarnings("WeakerAccess") /* synthetic access */
-        CallbackListener(@Nullable BiometricViewModel viewModel) {
-            mViewModelRef = new WeakReference<>(viewModel);
+        init {
+            mViewModelRef = WeakReference(viewModel)
         }
 
-        @Override
-        public void onSuccess(@NonNull AuthenticationResult result) {
-            if (mViewModelRef.get() != null && mViewModelRef.get().isAwaitingResult()) {
+        override fun onSuccess(result: AuthenticationResult) {
+            var result = result
+            if (mViewModelRef.get() != null && mViewModelRef.get()!!.isAwaitingResult) {
                 // Try to infer the authentication type if unknown.
                 if (result.getAuthenticationType()
-                        == BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN) {
-                    result = new AuthenticationResult(
-                            result.getCryptoObject(),
-                            mViewModelRef.get().getInferredAuthenticationResultType());
+                    == BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN
+                ) {
+                    result = AuthenticationResult(
+                        result.getCryptoObject(),
+                        mViewModelRef.get()!!.inferredAuthenticationResultType
+                    )
                 }
-
-                mViewModelRef.get().setAuthenticationResult(result);
+                mViewModelRef.get()!!.setAuthenticationResult(result)
             }
         }
 
-        @Override
-        public void onError(int errorCode, @Nullable CharSequence errorMessage) {
-            if (mViewModelRef.get() != null
-                    && !mViewModelRef.get().isConfirmingDeviceCredential()
-                    && mViewModelRef.get().isAwaitingResult()) {
-                mViewModelRef.get().setAuthenticationError(
-                        new BiometricErrorData(errorCode, errorMessage));
+        override fun onError(errorCode: Int, errorMessage: CharSequence?) {
+            if (mViewModelRef.get() != null && !mViewModelRef.get()!!.isConfirmingDeviceCredential
+                && mViewModelRef.get()!!.isAwaitingResult
+            ) {
+                mViewModelRef.get()!!.setAuthenticationError(
+                    BiometricErrorData(errorCode, errorMessage)
+                )
             }
         }
 
-        @Override
-        public void onHelp(@Nullable CharSequence helpMessage) {
+        override fun onHelp(helpMessage: CharSequence?) {
             if (mViewModelRef.get() != null) {
-                mViewModelRef.get().setAuthenticationHelpMessage(helpMessage);
+                mViewModelRef.get()!!.setAuthenticationHelpMessage(helpMessage)
             }
         }
 
-        @Override
-        public void onFailure() {
-            if (mViewModelRef.get() != null && mViewModelRef.get().isAwaitingResult()) {
-                mViewModelRef.get().setAuthenticationFailurePending(true);
+        override fun onFailure() {
+            if (mViewModelRef.get() != null && mViewModelRef.get()!!.isAwaitingResult) {
+                mViewModelRef.get()!!.setAuthenticationFailurePending(true)
             }
         }
     }
 
     /**
-     * The dialog listener that is returned by {@link #getNegativeButtonListener()}.
+     * The dialog listener that is returned by [.getNegativeButtonListener].
      */
-    private static class NegativeButtonListener implements DialogInterface.OnClickListener {
-        @NonNull
-        private final WeakReference<BiometricViewModel> mViewModelRef;
+    private class NegativeButtonListener internal constructor(viewModel: BiometricViewModel?) : DialogInterface.OnClickListener {
+        private val mViewModelRef: WeakReference<BiometricViewModel?>
 
         /**
          * Creates a negative button listener with a weak reference to the given view model.
          *
          * @param viewModel The view model instance to hold a weak reference to.
          */
-        @SuppressWarnings("WeakerAccess") /* synthetic access */
-        NegativeButtonListener(@Nullable BiometricViewModel viewModel) {
-            mViewModelRef = new WeakReference<>(viewModel);
+        init {
+            mViewModelRef = WeakReference(viewModel)
         }
 
-        @Override
-        public void onClick(DialogInterface dialogInterface, int which) {
+        override fun onClick(dialogInterface: DialogInterface, which: Int) {
             if (mViewModelRef.get() != null) {
-                mViewModelRef.get().setNegativeButtonPressPending(true);
+                mViewModelRef.get()!!.setNegativeButtonPressPending(true)
             }
         }
     }
@@ -135,532 +125,430 @@ public class BiometricViewModel extends ViewModel {
     /**
      * The executor that will run authentication callback methods.
      *
-     * <p>If unset, callbacks are invoked on the main thread with {@link Looper#getMainLooper()}.
+     *
+     * If unset, callbacks are invoked on the main thread with [Looper.getMainLooper].
      */
-    @Nullable
-    private Executor mClientExecutor;
+    private var mClientExecutor: Executor? = null
 
     /**
      * The callback object that will receive authentication events.
      */
-    @Nullable
-    private AuthenticationCallback mClientCallback;
+    private var mClientCallback: AuthenticationCallback? = null
 
     /**
      * Info about the appearance and behavior of the prompt provided by the client application.
      */
-    @Nullable
-    private PromptInfo mPromptInfo;
+    private var mPromptInfo: PromptInfo? = null
 
     /**
      * The crypto object associated with the current authentication session.
      */
-    @Nullable
-    private CryptoObject mCryptoObject;
+    var cryptoObject: CryptoObject? = null
 
     /**
      * A provider for cross-platform compatible authentication callbacks.
      */
-    @Nullable
-    private AuthenticationCallbackProvider mAuthenticationCallbackProvider;
+    private var mAuthenticationCallbackProvider: AuthenticationCallbackProvider? = null
 
     /**
      * A provider for cross-platform compatible cancellation signal objects.
      */
-    @Nullable
-    private CancellationSignalProvider mCancellationSignalProvider;
+    private var mCancellationSignalProvider: CancellationSignalProvider? = null
 
     /**
      * A dialog listener for the negative button shown on the prompt.
      */
-    @Nullable
-    private DialogInterface.OnClickListener mNegativeButtonListener;
+    private var mNegativeButtonListener: DialogInterface.OnClickListener? = null
 
     /**
      * A label for the negative button shown on the prompt.
      *
-     * <p>If set, this value overrides the one returned by
-     * {@link PromptInfo#getNegativeButtonText()}.
+     *
+     * If set, this value overrides the one returned by
+     * [PromptInfo.getNegativeButtonText].
      */
-    @Nullable
-    private CharSequence mNegativeButtonTextOverride;
+    private var mNegativeButtonTextOverride: CharSequence? = null
 
     /**
      * An integer indicating where the dialog was last canceled from.
      */
-    @BiometricFragment.CanceledFrom
-    private int mCanceledFrom = BiometricFragment.CANCELED_FROM_INTERNAL;
+    @CanceledFrom
+    var canceledFrom = BiometricFragment.CANCELED_FROM_INTERNAL
 
     /**
      * Whether the prompt is currently showing.
      */
-    private boolean mIsPromptShowing;
+    var isPromptShowing = false
 
     /**
      * Whether the client callback is awaiting an authentication result.
      */
-    private boolean mIsAwaitingResult;
+    var isAwaitingResult = false
 
     /**
      * Whether the user is currently authenticating with their PIN, pattern, or password.
      */
-    private boolean mIsConfirmingDeviceCredential;
+    var isConfirmingDeviceCredential = false
 
     /**
      * Whether the prompt should delay showing the authentication UI.
      */
-    private boolean mIsDelayingPrompt;
+    var isDelayingPrompt = false
 
     /**
      * Whether the prompt should ignore cancel requests not initiated by the client.
      */
-    private boolean mIsIgnoringCancel;
+    var isIgnoringCancel = false
 
     /**
      * Information associated with a successful authentication attempt.
      */
-    @Nullable
-    private MutableLiveData<AuthenticationResult> mAuthenticationResult;
+    private var mAuthenticationResult: MutableLiveData<AuthenticationResult?>? = null
 
     /**
      * Information associated with an unrecoverable authentication error.
      */
-    @Nullable
-    private MutableLiveData<BiometricErrorData> mAuthenticationError;
+    private var mAuthenticationError: MutableLiveData<BiometricErrorData?>? = null
 
     /**
      * A human-readable message describing a recoverable authentication error or event.
      */
-    @Nullable
-    private MutableLiveData<CharSequence> mAuthenticationHelpMessage;
+    private var mAuthenticationHelpMessage: MutableLiveData<CharSequence?>? = null
 
     /**
      * Whether an unrecognized biometric has been presented.
      */
-    @Nullable
-    private MutableLiveData<Boolean> mIsAuthenticationFailurePending;
+    private var mIsAuthenticationFailurePending: MutableLiveData<Boolean>? = null
 
     /**
      * Whether the user has pressed the negative button on the prompt.
      */
-    @Nullable
-    private MutableLiveData<Boolean> mIsNegativeButtonPressPending;
+    private var mIsNegativeButtonPressPending: MutableLiveData<Boolean>? = null
 
     /**
      * Whether the fingerprint dialog should always be dismissed instantly.
      */
-    private boolean mIsFingerprintDialogDismissedInstantly = true;
+    var isFingerprintDialogDismissedInstantly = true
 
     /**
      * Whether the user has manually canceled out of the fingerprint dialog.
      */
-    @Nullable
-    private MutableLiveData<Boolean> mIsFingerprintDialogCancelPending;
+    private var mIsFingerprintDialogCancelPending: MutableLiveData<Boolean>? = null
 
     /**
      * The previous state of the fingerprint dialog UI.
      */
+    @get:FingerprintDialogFragment.State
     @FingerprintDialogFragment.State
-    private int mFingerprintDialogPreviousState = FingerprintDialogFragment.STATE_NONE;
+    var fingerprintDialogPreviousState = FingerprintDialogFragment.STATE_NONE
 
     /**
      * The current state of the fingerprint dialog UI.
      */
-    @Nullable
-    private MutableLiveData<Integer> mFingerprintDialogState;
+    private var mFingerprintDialogState: MutableLiveData<Int>? = null
 
     /**
      * A human-readable message to be displayed below the icon on the fingerprint dialog.
      */
-    @Nullable
-    private MutableLiveData<CharSequence> mFingerprintDialogHelpMessage;
-
-    @NonNull
-    Executor getClientExecutor() {
-        return mClientExecutor != null ? mClientExecutor : new DefaultExecutor();
-    }
-
-    void setClientExecutor(@NonNull Executor clientExecutor) {
-        mClientExecutor = clientExecutor;
-    }
-
-    @NonNull
-    AuthenticationCallback getClientCallback() {
-        if (mClientCallback == null) {
-            mClientCallback = new AuthenticationCallback() {
-            };
+    private var mFingerprintDialogHelpMessage: MutableLiveData<CharSequence>? = null
+    var clientExecutor: Executor
+        get() = if (mClientExecutor != null) mClientExecutor!! else DefaultExecutor()
+        set(clientExecutor) {
+            mClientExecutor = clientExecutor
         }
-        return mClientCallback;
-    }
-
-    void setClientCallback(@NonNull AuthenticationCallback clientCallback) {
-        mClientCallback = clientCallback;
-    }
+    var clientCallback: AuthenticationCallback
+        get() {
+            if (mClientCallback == null) {
+                mClientCallback = object : AuthenticationCallback() {}
+            }
+            return mClientCallback!!
+        }
+        set(clientCallback) {
+            mClientCallback = clientCallback
+        }
 
     /**
      * Clears the client callback reference held by this view model.
      */
-    void resetClientCallback() {
-        mClientCallback = null;
+    fun resetClientCallback() {
+        mClientCallback = null
     }
 
-    void setPromptInfo(@Nullable PromptInfo promptInfo) {
-        mPromptInfo = promptInfo;
+    fun setPromptInfo(promptInfo: PromptInfo?) {
+        mPromptInfo = promptInfo
     }
 
     /**
      * Gets the title to be shown on the biometric prompt.
      *
-     * <p>This method relies on the {@link PromptInfo} set by
-     * {@link #setPromptInfo(PromptInfo)}.
      *
-     * @return The title for the prompt, or {@code null} if not set.
+     * This method relies on the [PromptInfo] set by
+     * [.setPromptInfo].
+     *
+     * @return The title for the prompt, or `null` if not set.
      */
-    @Nullable
-    CharSequence getTitle() {
-        return mPromptInfo != null ? mPromptInfo.getTitle() : null;
-    }
+    val title: CharSequence?
+        get() = if (mPromptInfo != null) mPromptInfo!!.getTitle() else null
 
     /**
      * Gets the subtitle to be shown on the biometric prompt.
      *
-     * <p>This method relies on the {@link PromptInfo} set by
-     * {@link #setPromptInfo(PromptInfo)}.
      *
-     * @return The subtitle for the prompt, or {@code null} if not set.
+     * This method relies on the [PromptInfo] set by
+     * [.setPromptInfo].
+     *
+     * @return The subtitle for the prompt, or `null` if not set.
      */
-    @Nullable
-    CharSequence getSubtitle() {
-        return mPromptInfo != null ? mPromptInfo.getSubtitle() : null;
-    }
+    val subtitle: CharSequence?
+        get() = if (mPromptInfo != null) mPromptInfo!!.getSubtitle() else null
 
     /**
      * Gets the description to be shown on the biometric prompt.
      *
-     * <p>This method relies on the {@link PromptInfo} set by
-     * {@link #setPromptInfo(PromptInfo)}.
      *
-     * @return The description for the prompt, or {@code null} if not set.
+     * This method relies on the [PromptInfo] set by
+     * [.setPromptInfo].
+     *
+     * @return The description for the prompt, or `null` if not set.
      */
-    @Nullable
-    CharSequence getDescription() {
-        return mPromptInfo != null ? mPromptInfo.getDescription() : null;
-    }
+    val description: CharSequence?
+        get() = if (mPromptInfo != null) mPromptInfo!!.getDescription() else null
 
     /**
      * Gets the text that should be shown for the negative button on the biometric prompt.
      *
-     * <p>If non-null, the value set by {@link #setNegativeButtonTextOverride(CharSequence)} is
-     * used. Otherwise, falls back to the value returned by
-     * {@link PromptInfo#getNegativeButtonText()}, or {@code null} if a non-null
-     * {@link PromptInfo} has not been set by
-     * {@link #setPromptInfo(PromptInfo)}.
      *
-     * @return The negative button text for the prompt, or {@code null} if not set.
+     * If non-null, the value set by [.setNegativeButtonTextOverride] is
+     * used. Otherwise, falls back to the value returned by
+     * [PromptInfo.getNegativeButtonText], or `null` if a non-null
+     * [PromptInfo] has not been set by
+     * [.setPromptInfo].
+     *
+     * @return The negative button text for the prompt, or `null` if not set.
      */
-    @Nullable
-    CharSequence getNegativeButtonText() {
-        if (mNegativeButtonTextOverride != null) {
-            return mNegativeButtonTextOverride;
+    val negativeButtonText: CharSequence?
+        get() = if (mNegativeButtonTextOverride != null) {
+            mNegativeButtonTextOverride
         } else if (mPromptInfo != null) {
-            return mPromptInfo.getNegativeButtonText();
+            mPromptInfo!!.getNegativeButtonText()
         } else {
-            return null;
+            null
         }
-    }
 
     /**
      * Checks if the confirmation required option is enabled for the biometric prompt.
      *
-     * <p>This method relies on the {@link PromptInfo} set by
-     * {@link #setPromptInfo(PromptInfo)}.
+     *
+     * This method relies on the [PromptInfo] set by
+     * [.setPromptInfo].
      *
      * @return Whether the confirmation required option is enabled.
      */
-    boolean isConfirmationRequired() {
-        return mPromptInfo == null || mPromptInfo.isConfirmationRequired();
-    }
+    val isConfirmationRequired: Boolean
+        get() = mPromptInfo == null || mPromptInfo!!.isConfirmationRequired()
 
     /**
      * Gets the type(s) of authenticators that may be invoked by the biometric prompt.
      *
-     * <p>If a non-null {@link PromptInfo} has been set by
-     * {@link #setPromptInfo(PromptInfo)}, this is the single consolidated set of
+     *
+     * If a non-null [PromptInfo] has been set by
+     * [.setPromptInfo], this is the single consolidated set of
      * authenticators allowed by the prompt, taking into account the values of
-     * {@link PromptInfo#getAllowedAuthenticators()},
-     * {@link PromptInfo#isDeviceCredentialAllowed()}, and
-     * {@link #getCryptoObject()}.
+     * [PromptInfo.getAllowedAuthenticators],
+     * [PromptInfo.isDeviceCredentialAllowed], and
+     * [.getCryptoObject].
      *
      * @return A bit field representing all valid authenticator types that may be invoked by
      * the prompt, or 0 if not set.
      */
-    @SuppressWarnings("deprecation")
-    @AuthenticatorTypes
-    int getAllowedAuthenticators() {
-        return mPromptInfo != null
-                ? AuthenticatorUtils.getConsolidatedAuthenticators(mPromptInfo, mCryptoObject)
-                : 0;
-    }
-
-    @Nullable
-    CryptoObject getCryptoObject() {
-        return mCryptoObject;
-    }
-
-    void setCryptoObject(@Nullable CryptoObject cryptoObject) {
-        mCryptoObject = cryptoObject;
-    }
-
-    @NonNull
-    AuthenticationCallbackProvider getAuthenticationCallbackProvider() {
-        if (mAuthenticationCallbackProvider == null) {
-            mAuthenticationCallbackProvider =
-                    new AuthenticationCallbackProvider(new CallbackListener(this));
+    @get:AuthenticatorTypes
+    val allowedAuthenticators: Int
+        get() = if (mPromptInfo != null) getConsolidatedAuthenticators(mPromptInfo!!, cryptoObject) else 0
+    val authenticationCallbackProvider: AuthenticationCallbackProvider
+        get() {
+            if (mAuthenticationCallbackProvider == null) {
+                mAuthenticationCallbackProvider = AuthenticationCallbackProvider(CallbackListener(this))
+            }
+            return mAuthenticationCallbackProvider!!
         }
-        return mAuthenticationCallbackProvider;
-    }
-
-    @NonNull
-    CancellationSignalProvider getCancellationSignalProvider() {
-        if (mCancellationSignalProvider == null) {
-            mCancellationSignalProvider = new CancellationSignalProvider();
+    val cancellationSignalProvider: CancellationSignalProvider
+        get() {
+            if (mCancellationSignalProvider == null) {
+                mCancellationSignalProvider = CancellationSignalProvider()
+            }
+            return mCancellationSignalProvider!!
         }
-        return mCancellationSignalProvider;
-    }
-
-    @NonNull
-    DialogInterface.OnClickListener getNegativeButtonListener() {
-        if (mNegativeButtonListener == null) {
-            mNegativeButtonListener = new NegativeButtonListener(this);
+    val negativeButtonListener: DialogInterface.OnClickListener
+        get() {
+            if (mNegativeButtonListener == null) {
+                mNegativeButtonListener = NegativeButtonListener(this)
+            }
+            return mNegativeButtonListener!!
         }
-        return mNegativeButtonListener;
+
+    fun setNegativeButtonTextOverride(negativeButtonTextOverride: CharSequence?) {
+        mNegativeButtonTextOverride = negativeButtonTextOverride
     }
 
-    void setNegativeButtonTextOverride(@Nullable CharSequence negativeButtonTextOverride) {
-        mNegativeButtonTextOverride = negativeButtonTextOverride;
-    }
+    val authenticationResult: LiveData<AuthenticationResult?>
+        get() {
+            if (mAuthenticationResult == null) {
+                mAuthenticationResult = MutableLiveData()
+            }
+            return mAuthenticationResult!!
+        }
 
-    int getCanceledFrom() {
-        return mCanceledFrom;
-    }
-
-    void setCanceledFrom(int canceledFrom) {
-        mCanceledFrom = canceledFrom;
-    }
-
-    boolean isPromptShowing() {
-        return mIsPromptShowing;
-    }
-
-    void setPromptShowing(boolean promptShowing) {
-        mIsPromptShowing = promptShowing;
-    }
-
-    boolean isAwaitingResult() {
-        return mIsAwaitingResult;
-    }
-
-    void setAwaitingResult(boolean awaitingResult) {
-        mIsAwaitingResult = awaitingResult;
-    }
-
-    boolean isConfirmingDeviceCredential() {
-        return mIsConfirmingDeviceCredential;
-    }
-
-    void setConfirmingDeviceCredential(boolean confirmingDeviceCredential) {
-        mIsConfirmingDeviceCredential = confirmingDeviceCredential;
-    }
-
-    boolean isDelayingPrompt() {
-        return mIsDelayingPrompt;
-    }
-
-    void setDelayingPrompt(boolean delayingPrompt) {
-        mIsDelayingPrompt = delayingPrompt;
-    }
-
-    boolean isIgnoringCancel() {
-        return mIsIgnoringCancel;
-    }
-
-    void setIgnoringCancel(boolean ignoringCancel) {
-        mIsIgnoringCancel = ignoringCancel;
-    }
-
-    @NonNull
-    LiveData<AuthenticationResult> getAuthenticationResult() {
+    fun setAuthenticationResult(
+        authenticationResult: AuthenticationResult?
+    ) {
         if (mAuthenticationResult == null) {
-            mAuthenticationResult = new MutableLiveData<>();
+            mAuthenticationResult = MutableLiveData()
         }
-        return mAuthenticationResult;
+        updateValue(mAuthenticationResult!!, authenticationResult)
     }
 
-    void setAuthenticationResult(
-            @Nullable AuthenticationResult authenticationResult) {
-        if (mAuthenticationResult == null) {
-            mAuthenticationResult = new MutableLiveData<>();
+    val authenticationError: MutableLiveData<BiometricErrorData?>
+        get() {
+            if (mAuthenticationError == null) {
+                mAuthenticationError = MutableLiveData()
+            }
+            return mAuthenticationError!!
         }
-        updateValue(mAuthenticationResult, authenticationResult);
-    }
 
-    @NonNull
-    MutableLiveData<BiometricErrorData> getAuthenticationError() {
+    fun setAuthenticationError(authenticationError: BiometricErrorData?) {
         if (mAuthenticationError == null) {
-            mAuthenticationError = new MutableLiveData<>();
+            mAuthenticationError = MutableLiveData()
         }
-        return mAuthenticationError;
+        updateValue(mAuthenticationError!!, authenticationError)
     }
 
-    void setAuthenticationError(@Nullable BiometricErrorData authenticationError) {
-        if (mAuthenticationError == null) {
-            mAuthenticationError = new MutableLiveData<>();
+    val authenticationHelpMessage: LiveData<CharSequence?>
+        get() {
+            if (mAuthenticationHelpMessage == null) {
+                mAuthenticationHelpMessage = MutableLiveData()
+            }
+            return mAuthenticationHelpMessage!!
         }
-        updateValue(mAuthenticationError, authenticationError);
-    }
 
-    @NonNull
-    LiveData<CharSequence> getAuthenticationHelpMessage() {
+    fun setAuthenticationHelpMessage(
+        authenticationHelpMessage: CharSequence?
+    ) {
         if (mAuthenticationHelpMessage == null) {
-            mAuthenticationHelpMessage = new MutableLiveData<>();
+            mAuthenticationHelpMessage = MutableLiveData()
         }
-        return mAuthenticationHelpMessage;
+        updateValue(mAuthenticationHelpMessage!!, authenticationHelpMessage)
     }
 
-    void setAuthenticationHelpMessage(
-            @Nullable CharSequence authenticationHelpMessage) {
-        if (mAuthenticationHelpMessage == null) {
-            mAuthenticationHelpMessage = new MutableLiveData<>();
+    val isAuthenticationFailurePending: LiveData<Boolean>
+        get() {
+            if (mIsAuthenticationFailurePending == null) {
+                mIsAuthenticationFailurePending = MutableLiveData()
+            }
+            return mIsAuthenticationFailurePending!!
         }
-        updateValue(mAuthenticationHelpMessage, authenticationHelpMessage);
-    }
 
-    @NonNull
-    LiveData<Boolean> isAuthenticationFailurePending() {
+    fun setAuthenticationFailurePending(authenticationFailurePending: Boolean) {
         if (mIsAuthenticationFailurePending == null) {
-            mIsAuthenticationFailurePending = new MutableLiveData<>();
+            mIsAuthenticationFailurePending = MutableLiveData()
         }
-        return mIsAuthenticationFailurePending;
+        updateValue(mIsAuthenticationFailurePending!!, authenticationFailurePending)
     }
 
-    void setAuthenticationFailurePending(boolean authenticationFailurePending) {
-        if (mIsAuthenticationFailurePending == null) {
-            mIsAuthenticationFailurePending = new MutableLiveData<>();
+    val isNegativeButtonPressPending: LiveData<Boolean>
+        get() {
+            if (mIsNegativeButtonPressPending == null) {
+                mIsNegativeButtonPressPending = MutableLiveData()
+            }
+            return mIsNegativeButtonPressPending!!
         }
-        updateValue(mIsAuthenticationFailurePending, authenticationFailurePending);
-    }
 
-    @NonNull
-    LiveData<Boolean> isNegativeButtonPressPending() {
+    fun setNegativeButtonPressPending(negativeButtonPressPending: Boolean) {
         if (mIsNegativeButtonPressPending == null) {
-            mIsNegativeButtonPressPending = new MutableLiveData<>();
+            mIsNegativeButtonPressPending = MutableLiveData()
         }
-        return mIsNegativeButtonPressPending;
+        updateValue(mIsNegativeButtonPressPending!!, negativeButtonPressPending)
     }
 
-    void setNegativeButtonPressPending(boolean negativeButtonPressPending) {
-        if (mIsNegativeButtonPressPending == null) {
-            mIsNegativeButtonPressPending = new MutableLiveData<>();
+    val isFingerprintDialogCancelPending: LiveData<Boolean>
+        get() {
+            if (mIsFingerprintDialogCancelPending == null) {
+                mIsFingerprintDialogCancelPending = MutableLiveData()
+            }
+            return mIsFingerprintDialogCancelPending!!
         }
-        updateValue(mIsNegativeButtonPressPending, negativeButtonPressPending);
-    }
 
-    boolean isFingerprintDialogDismissedInstantly() {
-        return mIsFingerprintDialogDismissedInstantly;
-    }
-
-    void setFingerprintDialogDismissedInstantly(
-            boolean fingerprintDialogDismissedInstantly) {
-        mIsFingerprintDialogDismissedInstantly = fingerprintDialogDismissedInstantly;
-    }
-
-    @NonNull
-    LiveData<Boolean> isFingerprintDialogCancelPending() {
+    fun setFingerprintDialogCancelPending(fingerprintDialogCancelPending: Boolean) {
         if (mIsFingerprintDialogCancelPending == null) {
-            mIsFingerprintDialogCancelPending = new MutableLiveData<>();
+            mIsFingerprintDialogCancelPending = MutableLiveData()
         }
-        return mIsFingerprintDialogCancelPending;
+        updateValue(mIsFingerprintDialogCancelPending!!, fingerprintDialogCancelPending)
     }
 
-    void setFingerprintDialogCancelPending(boolean fingerprintDialogCancelPending) {
-        if (mIsFingerprintDialogCancelPending == null) {
-            mIsFingerprintDialogCancelPending = new MutableLiveData<>();
+    val fingerprintDialogState: LiveData<Int>
+        get() {
+            if (mFingerprintDialogState == null) {
+                mFingerprintDialogState = MutableLiveData()
+            }
+            return mFingerprintDialogState!!
         }
-        updateValue(mIsFingerprintDialogCancelPending, fingerprintDialogCancelPending);
-    }
 
-    @FingerprintDialogFragment.State
-    int getFingerprintDialogPreviousState() {
-        return mFingerprintDialogPreviousState;
-    }
-
-    void setFingerprintDialogPreviousState(
-            @FingerprintDialogFragment.State int fingerprintDialogPreviousState) {
-        mFingerprintDialogPreviousState = fingerprintDialogPreviousState;
-    }
-
-    @NonNull
-    LiveData<Integer> getFingerprintDialogState() {
+    fun setFingerprintDialogState(
+        @FingerprintDialogFragment.State fingerprintDialogState: Int
+    ) {
         if (mFingerprintDialogState == null) {
-            mFingerprintDialogState = new MutableLiveData<>();
+            mFingerprintDialogState = MutableLiveData()
         }
-        return mFingerprintDialogState;
+        updateValue(mFingerprintDialogState!!, fingerprintDialogState)
     }
 
-    void setFingerprintDialogState(
-            @FingerprintDialogFragment.State int fingerprintDialogState) {
-        if (mFingerprintDialogState == null) {
-            mFingerprintDialogState = new MutableLiveData<>();
+    val fingerprintDialogHelpMessage: LiveData<CharSequence>
+        get() {
+            if (mFingerprintDialogHelpMessage == null) {
+                mFingerprintDialogHelpMessage = MutableLiveData()
+            }
+            return mFingerprintDialogHelpMessage!!
         }
-        updateValue(mFingerprintDialogState, fingerprintDialogState);
-    }
 
-    @NonNull
-    LiveData<CharSequence> getFingerprintDialogHelpMessage() {
+    fun setFingerprintDialogHelpMessage(
+        fingerprintDialogHelpMessage: CharSequence
+    ) {
         if (mFingerprintDialogHelpMessage == null) {
-            mFingerprintDialogHelpMessage = new MutableLiveData<>();
+            mFingerprintDialogHelpMessage = MutableLiveData()
         }
-        return mFingerprintDialogHelpMessage;
-    }
-
-    void setFingerprintDialogHelpMessage(
-            @NonNull CharSequence fingerprintDialogHelpMessage) {
-        if (mFingerprintDialogHelpMessage == null) {
-            mFingerprintDialogHelpMessage = new MutableLiveData<>();
-        }
-        updateValue(mFingerprintDialogHelpMessage, fingerprintDialogHelpMessage);
+        updateValue(mFingerprintDialogHelpMessage!!, fingerprintDialogHelpMessage)
     }
 
     /**
      * Attempts to infer the type of authenticator that was used to authenticate the user.
      *
      * @return The inferred authentication type, or
-     * {@link BiometricPrompt#AUTHENTICATION_RESULT_TYPE_UNKNOWN} if unknown.
+     * [BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN] if unknown.
      */
-    @SuppressWarnings("WeakerAccess") /* synthetic access */
-    @BiometricPrompt.AuthenticationResultType
-    int getInferredAuthenticationResultType() {
-        @AuthenticatorTypes final int authenticators = getAllowedAuthenticators();
-        if (
-                AuthenticatorUtils.isSomeBiometricAllowed(authenticators)
-                        && !AuthenticatorUtils.isDeviceCredentialAllowed(authenticators)
-        ) {
-            return BiometricPrompt.AUTHENTICATION_RESULT_TYPE_BIOMETRIC;
+    /* synthetic access */
+    @get:AuthenticationResultType
+    val inferredAuthenticationResultType: Int
+        get() {
+            @AuthenticatorTypes val authenticators = allowedAuthenticators
+            return if (isSomeBiometricAllowed(authenticators)
+                && !isDeviceCredentialAllowed(authenticators)
+            ) {
+                BiometricPrompt.AUTHENTICATION_RESULT_TYPE_BIOMETRIC
+            } else BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN
         }
-        return BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN;
-    }
 
-    /**
-     * Ensures the value of a given mutable live data object is updated on the main thread.
-     *
-     * @param liveData The mutable live data object whose value should be updated.
-     * @param value    The new value to be set for the mutable live data object.
-     */
-    private static <T> void updateValue(MutableLiveData<T> liveData, T value) {
-        if (Thread.currentThread() == Looper.getMainLooper().getThread()) {
-            liveData.setValue(value);
-        } else {
-            liveData.postValue(value);
+    companion object {
+        /**
+         * Ensures the value of a given mutable live data object is updated on the main thread.
+         *
+         * @param liveData The mutable live data object whose value should be updated.
+         * @param value    The new value to be set for the mutable live data object.
+         */
+        private fun <T> updateValue(liveData: MutableLiveData<T>, value: T) {
+            if (Thread.currentThread() === Looper.getMainLooper().thread) {
+                liveData.setValue(value)
+            } else {
+                liveData.postValue(value)
+            }
         }
     }
 }
