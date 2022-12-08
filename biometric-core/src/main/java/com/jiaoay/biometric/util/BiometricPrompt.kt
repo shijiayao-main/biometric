@@ -1,4 +1,4 @@
-package com.jiaoay.biometric
+package com.jiaoay.biometric.util
 
 import androidx.annotation.IntDef
 
@@ -146,14 +146,32 @@ object BiometricPrompt {
     /**
      * An error code that may be returned during authentication.
      */
-    @IntDef(ERROR_HW_UNAVAILABLE, ERROR_UNABLE_TO_PROCESS, ERROR_TIMEOUT, ERROR_NO_SPACE, ERROR_CANCELED, ERROR_LOCKOUT, ERROR_VENDOR, ERROR_LOCKOUT_PERMANENT, ERROR_USER_CANCELED, ERROR_NO_BIOMETRICS, ERROR_HW_NOT_PRESENT, ERROR_NEGATIVE_BUTTON, ERROR_NO_DEVICE_CREDENTIAL)
+    @IntDef(
+        ERROR_HW_UNAVAILABLE,
+        ERROR_UNABLE_TO_PROCESS,
+        ERROR_TIMEOUT,
+        ERROR_NO_SPACE,
+        ERROR_CANCELED,
+        ERROR_LOCKOUT,
+        ERROR_VENDOR,
+        ERROR_LOCKOUT_PERMANENT,
+        ERROR_USER_CANCELED,
+        ERROR_NO_BIOMETRICS,
+        ERROR_HW_NOT_PRESENT,
+        ERROR_NEGATIVE_BUTTON,
+        ERROR_NO_DEVICE_CREDENTIAL
+    )
     @Retention(AnnotationRetention.SOURCE)
     internal annotation class AuthenticationError
 
     /**
      * The authentication type that was used, as reported by [AuthenticationResult].
      */
-    @IntDef(AUTHENTICATION_RESULT_TYPE_UNKNOWN, AUTHENTICATION_RESULT_TYPE_DEVICE_CREDENTIAL, AUTHENTICATION_RESULT_TYPE_BIOMETRIC)
+    @IntDef(
+        AUTHENTICATION_RESULT_TYPE_UNKNOWN,
+        AUTHENTICATION_RESULT_TYPE_DEVICE_CREDENTIAL,
+        AUTHENTICATION_RESULT_TYPE_BIOMETRIC
+    )
     @Retention(AnnotationRetention.SOURCE)
     annotation class AuthenticationResultType
 }

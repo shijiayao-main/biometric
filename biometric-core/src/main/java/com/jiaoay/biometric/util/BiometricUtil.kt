@@ -1,7 +1,8 @@
-package com.jiaoay.biometric
+package com.jiaoay.biometric.util
 
 import android.content.Context
 import android.os.Build
+import com.jiaoay.biometric.R
 
 object BiometricUtil {
 

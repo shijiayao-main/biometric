@@ -1,4 +1,4 @@
-package com.jiaoay.biometric
+package com.jiaoay.biometric.util
 
 import android.os.Build
 import android.text.TextUtils

@@ -1,6 +1,6 @@
 package com.jiaoay.biometric.authentication
 
-import com.jiaoay.biometric.BiometricPrompt.AuthenticationResultType
+import com.jiaoay.biometric.util.BiometricPrompt.AuthenticationResultType
 import com.jiaoay.biometric.crypto.CryptoObject
 
 /**

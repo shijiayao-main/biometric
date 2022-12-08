@@ -1,6 +1,6 @@
-package com.jiaoay.biometric
+package com.jiaoay.biometric.util
 
-import com.jiaoay.biometric.BiometricPrompt.AuthenticationError
+import com.jiaoay.biometric.util.BiometricPrompt.AuthenticationError
 import java.util.*
 
 /**

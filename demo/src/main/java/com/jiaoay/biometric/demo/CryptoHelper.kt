@@ -4,7 +4,7 @@ import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import androidx.annotation.RequiresApi
-import com.jiaoay.biometric.BiometricPrompt
+import com.jiaoay.biometric.util.BiometricPrompt
 import com.jiaoay.biometric.crypto.CryptoObject
 import java.security.KeyStore
 import javax.crypto.Cipher

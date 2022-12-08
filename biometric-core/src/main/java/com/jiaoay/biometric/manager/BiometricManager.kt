@@ -6,7 +6,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
 import androidx.core.hardware.fingerprint.FingerprintManagerCompat
-import com.jiaoay.biometric.AuthenticatorUtils
+import com.jiaoay.biometric.util.AuthenticatorUtils
 import com.jiaoay.biometric.crypto.CryptoObjectUtils
 import com.jiaoay.biometric.manager.BiometricManagerApi29Impl.canAuthenticate
 import com.jiaoay.biometric.manager.BiometricManagerApi29Impl.getCanAuthenticateWithCryptoMethod

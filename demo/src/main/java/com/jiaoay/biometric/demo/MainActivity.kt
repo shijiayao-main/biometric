@@ -1,5 +1,6 @@
 package com.jiaoay.biometric.demo
 
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -19,6 +20,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.jiaoay.biometric.FingerprintApi21Compat
+import com.jiaoay.biometric.FingerprintApi28Compat
 import com.jiaoay.biometric.demo.ui.theme.BiometricDemoTheme
 import com.jiaoay.biometric.ui.BiometricV2ViewModel
 import com.jiaoay.biometric.ui.fragment.BiometricFragment.Companion.CANCELED_FROM_INTERNAL
@@ -57,19 +60,22 @@ class MainActivity : AppCompatActivity() {
                     biometricType = biometricType,
                     isEnableBiometric = isEnableBiometric
                 ) {
-//                    viewModel.showFingerprintDialogForAuthentication(
-//                        context = this
-//                    )
-                    biometricHelper.showBiometricPrompt(
-                        title = "Title",
-                        negativeButtonText = "Cancel",
-                        subtitle = "Subtitle",
-                        description = "Description",
-                        confirmationRequired = true,
-                    ) {
-                        // Do something when success
-                        Toast.makeText(this, "Success", Toast.LENGTH_SHORT).show()
+                    val compat = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        FingerprintApi28Compat(this)
+                    } else {
+                        FingerprintApi21Compat(this)
                     }
+                    compat.authWithFingerprint(null)
+//                    biometricHelper.showBiometricPrompt(
+//                        title = "Title",
+//                        negativeButtonText = "Cancel",
+//                        subtitle = "Subtitle",
+//                        description = "Description",
+//                        confirmationRequired = true,
+//                    ) {
+//                        // Do something when success
+//                        Toast.makeText(this, "Success", Toast.LENGTH_SHORT).show()
+//                    }
                 }
             }
         }

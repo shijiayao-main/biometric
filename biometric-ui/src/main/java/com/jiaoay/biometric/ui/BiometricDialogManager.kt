@@ -5,8 +5,8 @@ import android.util.Log
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModelProvider
-import com.jiaoay.biometric.AuthenticatorUtils
-import com.jiaoay.biometric.PromptInfo
+import com.jiaoay.biometric.util.AuthenticatorUtils
+import com.jiaoay.biometric.util.PromptInfo
 import com.jiaoay.biometric.authentication.AuthenticationCallback
 import com.jiaoay.biometric.crypto.CryptoObject
 import com.jiaoay.biometric.manager.AuthenticatorTypes

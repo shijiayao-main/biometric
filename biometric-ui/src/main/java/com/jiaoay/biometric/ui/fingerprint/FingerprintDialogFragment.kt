@@ -16,7 +16,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
-import com.jiaoay.biometric.AuthenticatorUtils.isDeviceCredentialAllowed
+import com.jiaoay.biometric.util.AuthenticatorUtils.isDeviceCredentialAllowed
 import com.jiaoay.biometric.ui.BiometricViewModel
 import com.jiaoay.biometric_ui.R
 import com.jiaoay.biometric_ui.databinding.FingerprintDialogLayoutBinding

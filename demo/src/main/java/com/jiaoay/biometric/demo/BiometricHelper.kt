@@ -6,7 +6,7 @@ import com.jiaoay.biometric.authentication.AuthenticationCallback
 import com.jiaoay.biometric.authentication.AuthenticationResult
 import com.jiaoay.biometric.manager.BiometricManager
 import com.jiaoay.biometric.crypto.CryptoObject
-import com.jiaoay.biometric.PromptInfo
+import com.jiaoay.biometric.util.PromptInfo
 import com.jiaoay.biometric.manager.Authenticators
 import com.jiaoay.biometric.ui.BiometricDialogManager
 

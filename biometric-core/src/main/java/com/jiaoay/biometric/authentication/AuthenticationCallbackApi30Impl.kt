@@ -3,7 +3,7 @@ package com.jiaoay.biometric.authentication
 import android.hardware.biometrics.BiometricPrompt
 import android.os.Build
 import androidx.annotation.RequiresApi
-import com.jiaoay.biometric.BiometricPrompt.AuthenticationResultType
+import com.jiaoay.biometric.util.BiometricPrompt.AuthenticationResultType
 
 /**
  * Nested class to avoid verification errors for methods introduced in Android 11 (API 30).

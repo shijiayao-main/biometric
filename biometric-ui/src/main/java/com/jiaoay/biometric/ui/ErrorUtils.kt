@@ -2,7 +2,7 @@ package com.jiaoay.biometric.ui
 
 import android.content.Context
 import android.util.Log
-import com.jiaoay.biometric.BiometricPrompt
+import com.jiaoay.biometric.util.BiometricPrompt
 import com.jiaoay.biometric_ui.R
 
 /**

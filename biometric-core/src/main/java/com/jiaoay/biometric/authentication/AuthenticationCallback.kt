@@ -1,6 +1,6 @@
 package com.jiaoay.biometric.authentication
 
-import com.jiaoay.biometric.BiometricPrompt.AuthenticationError
+import com.jiaoay.biometric.util.BiometricPrompt.AuthenticationError
 
 /**
  * A collection of methods that may be invoked by {@link BiometricPrompt} during authentication.

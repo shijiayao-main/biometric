@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.hardware.fingerprint.FingerprintManagerCompat
-import com.jiaoay.biometric.BiometricUtil
+import com.jiaoay.biometric.util.BiometricUtil
 import com.jiaoay.biometric.keyguard.KeyguardUtils
 import com.jiaoay.biometric.pack.PackageUtils
 

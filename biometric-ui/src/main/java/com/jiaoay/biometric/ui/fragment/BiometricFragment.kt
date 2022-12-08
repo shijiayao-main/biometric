@@ -17,10 +17,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.core.hardware.fingerprint.FingerprintManagerCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import com.jiaoay.biometric.AuthenticatorUtils.getConsolidatedAuthenticators
-import com.jiaoay.biometric.AuthenticatorUtils.isDeviceCredentialAllowed
-import com.jiaoay.biometric.BiometricUtil
-import com.jiaoay.biometric.PromptInfo
 import com.jiaoay.biometric.authentication.AuthenticationResult
 import com.jiaoay.biometric.crypto.CryptoObject
 import com.jiaoay.biometric.crypto.CryptoObjectUtils.createFakeCryptoObject
@@ -39,16 +35,9 @@ import com.jiaoay.biometric.ui.ErrorUtils.isKnownError
 import com.jiaoay.biometric.ui.ErrorUtils.isLockoutError
 import com.jiaoay.biometric.ui.fingerprint.FingerprintDialogFragment
 import com.jiaoay.biometric.ui.fragment.BiometricFragmentApi21Impl.createConfirmDeviceCredentialIntent
-import com.jiaoay.biometric.ui.fragment.BiometricFragmentApi28Impl.authenticate
-import com.jiaoay.biometric.ui.fragment.BiometricFragmentApi28Impl.buildPrompt
-import com.jiaoay.biometric.ui.fragment.BiometricFragmentApi28Impl.createPromptBuilder
-import com.jiaoay.biometric.ui.fragment.BiometricFragmentApi28Impl.setDescription
-import com.jiaoay.biometric.ui.fragment.BiometricFragmentApi28Impl.setNegativeButton
-import com.jiaoay.biometric.ui.fragment.BiometricFragmentApi28Impl.setSubtitle
-import com.jiaoay.biometric.ui.fragment.BiometricFragmentApi28Impl.setTitle
-import com.jiaoay.biometric.ui.fragment.BiometricFragmentApi29Impl.setConfirmationRequired
-import com.jiaoay.biometric.ui.fragment.BiometricFragmentApi29Impl.setDeviceCredentialAllowed
-import com.jiaoay.biometric.ui.fragment.BiometricFragmentApi30Impl.setAllowedAuthenticators
+import com.jiaoay.biometric.util.AuthenticatorUtils
+import com.jiaoay.biometric.util.BiometricUtil
+import com.jiaoay.biometric.util.PromptInfo
 import com.jiaoay.biometric_ui.R
 import java.lang.ref.WeakReference
 import java.util.concurrent.Executor
@@ -70,7 +59,7 @@ class BiometricFragment : Fragment() {
      * An executor used by [android.hardware.biometrics.BiometricPrompt] to run framework
      * code.
      */
-    private class PromptExecutor internal constructor() : Executor {
+    private class PromptExecutor() : Executor {
         private val mPromptHandler = Handler(Looper.getMainLooper())
         override fun execute(runnable: Runnable) {
             mPromptHandler.post(runnable)
@@ -118,7 +107,7 @@ class BiometricFragment : Fragment() {
         // Some device credential implementations in API 29 cause the prompt to receive a cancel
         // signal immediately after it's shown (b/162022588).
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q
-            && isDeviceCredentialAllowed(
+            && AuthenticatorUtils.isDeviceCredentialAllowed(
                 mViewModel.allowedAuthenticators
             )
         ) {
@@ -230,8 +219,13 @@ class BiometricFragment : Fragment() {
         mViewModel.setPromptInfo(info)
 
         // Use a fake crypto object to force Strong biometric auth prior to Android 11 (API 30).
-        @AuthenticatorTypes val authenticators = getConsolidatedAuthenticators(info, crypto)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Build.VERSION.SDK_INT < Build.VERSION_CODES.R && authenticators == Authenticators.BIOMETRIC_STRONG && crypto == null) {
+        @AuthenticatorTypes val authenticators = AuthenticatorUtils.getConsolidatedAuthenticators(info, crypto)
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.R &&
+            authenticators == Authenticators.BIOMETRIC_STRONG &&
+            crypto == null
+        ) {
             mViewModel.cryptoObject = createFakeCryptoObject()
         } else {
             mViewModel.cryptoObject = crypto
@@ -289,7 +283,7 @@ class BiometricFragment : Fragment() {
         val context = requireContext().applicationContext
         val fingerprintManagerCompat = FingerprintManagerCompat.from(context)
         val errorCode = checkForFingerprintPreAuthenticationErrors(fingerprintManagerCompat)
-        if (errorCode != com.jiaoay.biometric.BiometricPrompt.BIOMETRIC_SUCCESS) {
+        if (errorCode != com.jiaoay.biometric.util.BiometricPrompt.BIOMETRIC_SUCCESS) {
             sendErrorAndDismiss(
                 errorCode, getFingerprintErrorString(context, errorCode)
             )
@@ -318,22 +312,22 @@ class BiometricFragment : Fragment() {
      */
     @RequiresApi(Build.VERSION_CODES.P)
     private fun showBiometricPromptForAuthentication() {
-        val builder = createPromptBuilder(requireContext().applicationContext)
+        val builder = BiometricFragmentApi28Impl.createPromptBuilder(requireContext().applicationContext)
         val title = mViewModel.title
         val subtitle = mViewModel.subtitle
         val description = mViewModel.description
         if (title != null) {
-            setTitle(builder, title)
+            BiometricFragmentApi28Impl.setTitle(builder, title)
         }
         if (subtitle != null) {
-            setSubtitle(builder, subtitle)
+            BiometricFragmentApi28Impl.setSubtitle(builder, subtitle)
         }
         if (description != null) {
-            setDescription(builder, description)
+            BiometricFragmentApi28Impl.setDescription(builder, description)
         }
         val negativeButtonText = mViewModel.negativeButtonText
         if (!TextUtils.isEmpty(negativeButtonText)) {
-            setNegativeButton(
+            BiometricFragmentApi28Impl.setNegativeButton(
                 builder,
                 negativeButtonText!!,
                 mViewModel.clientExecutor,
@@ -343,20 +337,21 @@ class BiometricFragment : Fragment() {
 
         // Set the confirmation required option introduced in Android 10 (API 29).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            setConfirmationRequired(builder, mViewModel.isConfirmationRequired)
+            BiometricFragmentApi29Impl.setConfirmationRequired(builder, mViewModel.isConfirmationRequired)
         }
 
         // Set or emulate the allowed authenticators option introduced in Android 11 (API 30).
         @AuthenticatorTypes
         val authenticators = mViewModel.allowedAuthenticators
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            setAllowedAuthenticators(builder, authenticators)
+            BiometricFragmentApi30Impl.setAllowedAuthenticators(builder, authenticators)
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            setDeviceCredentialAllowed(
-                builder, isDeviceCredentialAllowed(authenticators)
+            BiometricFragmentApi29Impl.setDeviceCredentialAllowed(
+                builder,
+                AuthenticatorUtils.isDeviceCredentialAllowed(authenticators)
             )
         }
-        authenticateWithBiometricPrompt(buildPrompt(builder), context)
+        authenticateWithBiometricPrompt(BiometricFragmentApi28Impl.buildPrompt(builder), context)
     }
 
     /**
@@ -381,7 +376,7 @@ class BiometricFragment : Fragment() {
         } catch (e: NullPointerException) {
             // Catch and handle NPE if thrown by framework call to authenticate() (b/151316421).
             Log.e(TAG, "Got NPE while authenticating with fingerprint.", e)
-            val errorCode = com.jiaoay.biometric.BiometricPrompt.ERROR_HW_UNAVAILABLE
+            val errorCode = com.jiaoay.biometric.util.BiometricPrompt.ERROR_HW_UNAVAILABLE
             sendErrorAndDismiss(
                 errorCode, getFingerprintErrorString(context, errorCode)
             )
@@ -406,16 +401,16 @@ class BiometricFragment : Fragment() {
         val callback = mViewModel.authenticationCallbackProvider.biometricCallback
         try {
             if (cryptoObject == null) {
-                authenticate(biometricPrompt, cancellationSignal, executor, callback)
+                BiometricFragmentApi28Impl.authenticate(biometricPrompt, cancellationSignal, executor, callback)
             } else {
-                authenticate(
+                BiometricFragmentApi28Impl.authenticate(
                     biometricPrompt, cryptoObject, cancellationSignal, executor, callback
                 )
             }
         } catch (e: NullPointerException) {
             // Catch and handle NPE if thrown by framework call to authenticate() (b/151316421).
             Log.e(TAG, "Got NPE while authenticating with biometric prompt.", e)
-            val errorCode = com.jiaoay.biometric.BiometricPrompt.ERROR_HW_UNAVAILABLE
+            val errorCode = com.jiaoay.biometric.util.BiometricPrompt.ERROR_HW_UNAVAILABLE
             val errorString = context?.getString(R.string.default_error_msg) ?: ""
             sendErrorAndDismiss(errorCode, errorString)
         }
@@ -433,7 +428,7 @@ class BiometricFragment : Fragment() {
         if (isUsingFingerprintDialog) {
             mViewModel.canceledFrom = canceledFrom
             if (canceledFrom == CANCELED_FROM_USER) {
-                val errorCode = com.jiaoay.biometric.BiometricPrompt.ERROR_USER_CANCELED
+                val errorCode = com.jiaoay.biometric.util.BiometricPrompt.ERROR_USER_CANCELED
                 sendErrorToClient(
                     errorCode, getFingerprintErrorString(context, errorCode)
                 )
@@ -500,9 +495,9 @@ class BiometricFragment : Fragment() {
     @VisibleForTesting
     fun onAuthenticationError(errorCode: Int, errorMessage: CharSequence?) {
         // Ensure we're only sending publicly defined errors.
-        val knownErrorCode = if (isKnownError(errorCode)) errorCode else com.jiaoay.biometric.BiometricPrompt.ERROR_VENDOR
+        val knownErrorCode = if (isKnownError(errorCode)) errorCode else com.jiaoay.biometric.util.BiometricPrompt.ERROR_VENDOR
         val context = context
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && isLockoutError(knownErrorCode) && context != null && isDeviceSecuredWithCredential(context) && isDeviceCredentialAllowed(
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && isLockoutError(knownErrorCode) && context != null && isDeviceSecuredWithCredential(context) && AuthenticatorUtils.isDeviceCredentialAllowed(
                 mViewModel.allowedAuthenticators
             )
         ) {
@@ -512,7 +507,7 @@ class BiometricFragment : Fragment() {
         if (isUsingFingerprintDialog) {
             // Avoid passing a null error string to the client callback.
             val errorString = errorMessage ?: getFingerprintErrorString(getContext(), knownErrorCode)
-            if (knownErrorCode == com.jiaoay.biometric.BiometricPrompt.ERROR_CANCELED) {
+            if (knownErrorCode == com.jiaoay.biometric.util.BiometricPrompt.ERROR_CANCELED) {
                 // User-initiated cancellation errors should already be handled.
                 @CanceledFrom val canceledFrom = mViewModel.canceledFrom
                 if (canceledFrom == CANCELED_FROM_INTERNAL
@@ -578,7 +573,7 @@ class BiometricFragment : Fragment() {
     fun onCancelButtonPressed() {
         val negativeButtonText = mViewModel.negativeButtonText
         sendErrorAndDismiss(
-            com.jiaoay.biometric.BiometricPrompt.ERROR_NEGATIVE_BUTTON,
+            com.jiaoay.biometric.util.BiometricPrompt.ERROR_NEGATIVE_BUTTON,
             negativeButtonText ?: getString(R.string.default_error_msg)
         )
         cancelAuthentication(CANCELED_FROM_NEGATIVE_BUTTON)
@@ -599,7 +594,7 @@ class BiometricFragment : Fragment() {
         val keyguardManager = getKeyguardManager(activity)
         if (keyguardManager == null) {
             sendErrorAndDismiss(
-                com.jiaoay.biometric.BiometricPrompt.ERROR_HW_NOT_PRESENT,
+                com.jiaoay.biometric.util.BiometricPrompt.ERROR_HW_NOT_PRESENT,
                 getString(R.string.generic_error_no_keyguard)
             )
             return
@@ -617,7 +612,7 @@ class BiometricFragment : Fragment() {
         // A null intent from KeyguardManager means that the device is not secure.
         if (intent == null) {
             sendErrorAndDismiss(
-                com.jiaoay.biometric.BiometricPrompt.ERROR_NO_DEVICE_CREDENTIAL,
+                com.jiaoay.biometric.util.BiometricPrompt.ERROR_NO_DEVICE_CREDENTIAL,
                 getString(R.string.generic_error_no_device_credential)
             )
             return
@@ -645,13 +640,13 @@ class BiometricFragment : Fragment() {
             sendSuccessAndDismiss(
                 AuthenticationResult(
                     null /* crypto */,
-                    com.jiaoay.biometric.BiometricPrompt.AUTHENTICATION_RESULT_TYPE_DEVICE_CREDENTIAL
+                    com.jiaoay.biometric.util.BiometricPrompt.AUTHENTICATION_RESULT_TYPE_DEVICE_CREDENTIAL
                 )
             )
         } else {
             // Device credential auth failed. Assume this is due to the user canceling.
             sendErrorAndDismiss(
-                com.jiaoay.biometric.BiometricPrompt.ERROR_USER_CANCELED,
+                com.jiaoay.biometric.util.BiometricPrompt.ERROR_USER_CANCELED,
                 getString(R.string.generic_error_user_canceled)
             )
         }
@@ -755,7 +750,7 @@ class BiometricFragment : Fragment() {
      */  /* synthetic access */
     val isManagingDeviceCredentialButton: Boolean
         get() = (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P
-                && isDeviceCredentialAllowed(
+                && AuthenticatorUtils.isDeviceCredentialAllowed(
             mViewModel.allowedAuthenticators
         ))
 
@@ -897,11 +892,11 @@ class BiometricFragment : Fragment() {
             fingerprintManager: FingerprintManagerCompat
         ): Int {
             if (!fingerprintManager.isHardwareDetected) {
-                return com.jiaoay.biometric.BiometricPrompt.ERROR_HW_NOT_PRESENT
+                return com.jiaoay.biometric.util.BiometricPrompt.ERROR_HW_NOT_PRESENT
             } else if (!fingerprintManager.hasEnrolledFingerprints()) {
-                return com.jiaoay.biometric.BiometricPrompt.ERROR_NO_BIOMETRICS
+                return com.jiaoay.biometric.util.BiometricPrompt.ERROR_NO_BIOMETRICS
             }
-            return com.jiaoay.biometric.BiometricPrompt.BIOMETRIC_SUCCESS
+            return com.jiaoay.biometric.util.BiometricPrompt.BIOMETRIC_SUCCESS
         }
     }
 }

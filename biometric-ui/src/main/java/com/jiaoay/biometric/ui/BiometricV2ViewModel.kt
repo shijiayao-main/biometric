@@ -5,8 +5,8 @@ import android.util.Log
 import androidx.annotation.IntDef
 import androidx.core.hardware.fingerprint.FingerprintManagerCompat
 import androidx.lifecycle.ViewModel
-import com.jiaoay.biometric.AuthenticatorUtils
-import com.jiaoay.biometric.BiometricPrompt
+import com.jiaoay.biometric.util.AuthenticatorUtils
+import com.jiaoay.biometric.util.BiometricPrompt
 import com.jiaoay.biometric.authentication.AuthenticationCallbackProvider
 import com.jiaoay.biometric.authentication.AuthenticationResult
 import com.jiaoay.biometric.cancellation.CancellationSignalProvider
@@ -154,7 +154,7 @@ class BiometricV2ViewModel : ViewModel() {
 //        if (isUsingFingerprintDialog) {
 //            mViewModel.canceledFrom = canceledFrom
 //            if (canceledFrom == BiometricFragment.CANCELED_FROM_USER) {
-//                val errorCode = com.jiaoay.biometric.BiometricPrompt.ERROR_USER_CANCELED
+//                val errorCode = com.jiaoay.biometric.util.BiometricPrompt.ERROR_USER_CANCELED
 //                sendErrorToClient(
 //                    errorCode, ErrorUtils.getFingerprintErrorString(context, errorCode)
 //                )

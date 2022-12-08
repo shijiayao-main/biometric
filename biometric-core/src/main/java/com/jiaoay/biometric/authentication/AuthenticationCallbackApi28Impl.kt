@@ -2,8 +2,8 @@ package com.jiaoay.biometric.authentication
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import com.jiaoay.biometric.BiometricPrompt
-import com.jiaoay.biometric.BiometricPrompt.AuthenticationResultType
+import com.jiaoay.biometric.util.BiometricPrompt
+import com.jiaoay.biometric.util.BiometricPrompt.AuthenticationResultType
 import com.jiaoay.biometric.crypto.CryptoObjectUtils
 
 /**
