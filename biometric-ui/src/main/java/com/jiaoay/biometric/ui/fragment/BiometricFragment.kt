@@ -20,9 +20,6 @@ import androidx.fragment.app.activityViewModels
 import com.jiaoay.biometric.AuthenticatorUtils.getConsolidatedAuthenticators
 import com.jiaoay.biometric.AuthenticatorUtils.isDeviceCredentialAllowed
 import com.jiaoay.biometric.BiometricUtil
-import com.jiaoay.biometric.BiometricUtil.shouldDelayShowingPrompt
-import com.jiaoay.biometric.BiometricUtil.shouldHideFingerprintDialog
-import com.jiaoay.biometric.BiometricUtil.shouldUseFingerprintForCrypto
 import com.jiaoay.biometric.PromptInfo
 import com.jiaoay.biometric.authentication.AuthenticationResult
 import com.jiaoay.biometric.crypto.CryptoObject
@@ -84,7 +81,7 @@ class BiometricFragment : Fragment() {
      * A runnable with a weak reference to this fragment that can be used to invoke
      * [.showPromptForAuthentication].
      */
-    private class ShowPromptForAuthenticationRunnable internal constructor(fragment: BiometricFragment?) : Runnable {
+    private class ShowPromptForAuthenticationRunnable(fragment: BiometricFragment?) : Runnable {
         private val mFragmentRef: WeakReference<BiometricFragment?>
 
         init {
@@ -300,9 +297,11 @@ class BiometricFragment : Fragment() {
         }
         if (isAdded) {
             mViewModel.isFingerprintDialogDismissedInstantly = true
-            if (!shouldHideFingerprintDialog(context, Build.MODEL)) {
+            if (!BiometricUtil.shouldHideFingerprintDialog(context, Build.MODEL)) {
                 mHandler.postDelayed(
-                    { mViewModel.isFingerprintDialogDismissedInstantly = false },
+                    {
+                        mViewModel.isFingerprintDialogDismissedInstantly = false
+                    },
                     DISMISS_INSTANTLY_DELAY_MS.toLong()
                 )
                 val dialog = FingerprintDialogFragment.newInstance()
@@ -377,7 +376,7 @@ class BiometricFragment : Fragment() {
             .fingerprintCallback
         try {
             fingerprintManager.authenticate(
-                crypto, 0 , cancellationSignal, callback, null /* handler */
+                crypto, 0, cancellationSignal, callback, null /* handler */
             )
         } catch (e: NullPointerException) {
             // Catch and handle NPE if thrown by framework call to authenticate() (b/151316421).
@@ -455,7 +454,7 @@ class BiometricFragment : Fragment() {
 
         // Wait before showing again to work around a dismissal logic issue on API 29 (b/157783075).
         val context = context
-        if (context != null && shouldDelayShowingPrompt(context, Build.MODEL)) {
+        if (context != null && BiometricUtil.shouldDelayShowingPrompt(context, Build.MODEL)) {
             mViewModel.isDelayingPrompt = true
             mHandler.postDelayed(StopDelayingPromptRunnable(mViewModel), SHOW_PROMPT_DELAY_MS.toLong())
         }
@@ -780,7 +779,7 @@ class BiometricFragment : Fragment() {
     private val isFingerprintDialogNeededForCrypto: Boolean
         get() {
             val activity = activity
-            return activity != null && mViewModel.cryptoObject != null && shouldUseFingerprintForCrypto(
+            return activity != null && mViewModel.cryptoObject != null && BiometricUtil.shouldUseFingerprintForCrypto(
                 activity, Build.MANUFACTURER, Build.MODEL
             )
         }// On API 28, BiometricPrompt internally calls FingerprintManager#getErrorString(), which
@@ -823,7 +822,7 @@ class BiometricFragment : Fragment() {
     private val dismissDialogDelay: Int
         get() {
             val context = context
-            return if (context != null && shouldHideFingerprintDialog(context, Build.MODEL)) 0 else HIDE_DIALOG_DELAY_MS
+            return if (context != null && BiometricUtil.shouldHideFingerprintDialog(context, Build.MODEL)) 0 else HIDE_DIALOG_DELAY_MS
         }
 
     companion object {

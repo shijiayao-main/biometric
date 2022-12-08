@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.jiaoay.biometric.demo.ui.theme.BiometricDemoTheme
+import com.jiaoay.biometric.ui.BiometricV2ViewModel
+import com.jiaoay.biometric.ui.fragment.BiometricFragment.Companion.CANCELED_FROM_INTERNAL
 
 private const val TAG = "MainActivity"
 
@@ -28,10 +31,13 @@ class MainActivity : AppCompatActivity() {
         BiometricHelper(this)
     }
 
+    val viewModel by viewModels<BiometricV2ViewModel>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
+//            val viewModel by viewModels<BiometricV2ViewModel>()
             BiometricDemoTheme {
                 var biometricType by remember {
                     mutableStateOf(BiometricType.NONE)
@@ -51,6 +57,9 @@ class MainActivity : AppCompatActivity() {
                     biometricType = biometricType,
                     isEnableBiometric = isEnableBiometric
                 ) {
+//                    viewModel.showFingerprintDialogForAuthentication(
+//                        context = this
+//                    )
                     biometricHelper.showBiometricPrompt(
                         title = "Title",
                         negativeButtonText = "Cancel",
@@ -64,6 +73,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        viewModel.cancelAuthentication(CANCELED_FROM_INTERNAL)
+        super.onDestroy()
     }
 }
 

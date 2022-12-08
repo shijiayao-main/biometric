@@ -112,9 +112,9 @@ class AuthenticationCallbackProvider
                     }
 
                     override fun onAuthenticationSucceeded(result: FingerprintManagerCompat.AuthenticationResult) {
-                        val crypto = if (result != null) CryptoObjectUtils.unwrapFromFingerprintManager(
+                        val crypto = CryptoObjectUtils.unwrapFromFingerprintManager(
                             result.cryptoObject
-                        ) else null
+                        )
                         val resultCompat = AuthenticationResult(
                             crypto, BiometricPrompt.AUTHENTICATION_RESULT_TYPE_BIOMETRIC
                         )

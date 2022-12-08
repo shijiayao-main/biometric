@@ -19,9 +19,9 @@ import com.jiaoay.biometric.authentication.AuthenticationResult
 import com.jiaoay.biometric.cancellation.CancellationSignalProvider
 import com.jiaoay.biometric.crypto.CryptoObject
 import com.jiaoay.biometric.manager.AuthenticatorTypes
-import com.jiaoay.biometric.ui.fragment.BiometricFragment.CanceledFrom
 import com.jiaoay.biometric.ui.fingerprint.FingerprintDialogFragment
 import com.jiaoay.biometric.ui.fragment.BiometricFragment
+import com.jiaoay.biometric.ui.fragment.BiometricFragment.CanceledFrom
 import java.lang.ref.WeakReference
 import java.util.concurrent.Executor
 
@@ -38,7 +38,7 @@ class BiometricViewModel : ViewModel() {
      * The default executor provided when [.getClientExecutor] is called before
      * [.setClientExecutor].
      */
-    private class DefaultExecutor internal constructor() : Executor {
+    private class DefaultExecutor() : Executor {
         private val mHandler = Handler(Looper.getMainLooper())
         override fun execute(runnable: Runnable) {
             mHandler.post(runnable)
@@ -49,7 +49,7 @@ class BiometricViewModel : ViewModel() {
      * The authentication callback listener passed to [AuthenticationCallbackProvider] when
      * [.getAuthenticationCallbackProvider] is called.
      */
-    private class CallbackListener internal constructor(viewModel: BiometricViewModel?) : AuthenticationCallbackProvider.Listener() {
+    private class CallbackListener(viewModel: BiometricViewModel?) : AuthenticationCallbackProvider.Listener() {
         private val mViewModelRef: WeakReference<BiometricViewModel?>
 
         /**
@@ -65,9 +65,7 @@ class BiometricViewModel : ViewModel() {
             var result = result
             if (mViewModelRef.get() != null && mViewModelRef.get()!!.isAwaitingResult) {
                 // Try to infer the authentication type if unknown.
-                if (result.getAuthenticationType()
-                    == BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN
-                ) {
+                if (result.getAuthenticationType() == BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN) {
                     result = AuthenticationResult(
                         result.getCryptoObject(),
                         mViewModelRef.get()!!.inferredAuthenticationResultType
@@ -103,7 +101,7 @@ class BiometricViewModel : ViewModel() {
     /**
      * The dialog listener that is returned by [.getNegativeButtonListener].
      */
-    private class NegativeButtonListener internal constructor(viewModel: BiometricViewModel?) : DialogInterface.OnClickListener {
+    private class NegativeButtonListener(viewModel: BiometricViewModel?) : DialogInterface.OnClickListener {
         private val mViewModelRef: WeakReference<BiometricViewModel?>
 
         /**
@@ -363,7 +361,11 @@ class BiometricViewModel : ViewModel() {
      */
     @get:AuthenticatorTypes
     val allowedAuthenticators: Int
-        get() = if (mPromptInfo != null) getConsolidatedAuthenticators(mPromptInfo!!, cryptoObject) else 0
+        get() = if (mPromptInfo != null) {
+            getConsolidatedAuthenticators(mPromptInfo!!, cryptoObject)
+        } else {
+            0
+        }
     val authenticationCallbackProvider: AuthenticationCallbackProvider
         get() {
             if (mAuthenticationCallbackProvider == null) {
@@ -524,16 +526,16 @@ class BiometricViewModel : ViewModel() {
      * @return The inferred authentication type, or
      * [BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN] if unknown.
      */
-    /* synthetic access */
     @get:AuthenticationResultType
     val inferredAuthenticationResultType: Int
         get() {
-            @AuthenticatorTypes val authenticators = allowedAuthenticators
-            return if (isSomeBiometricAllowed(authenticators)
-                && !isDeviceCredentialAllowed(authenticators)
-            ) {
+            @AuthenticatorTypes
+            val authenticators = allowedAuthenticators
+            return if (isSomeBiometricAllowed(authenticators) && !isDeviceCredentialAllowed(authenticators)) {
                 BiometricPrompt.AUTHENTICATION_RESULT_TYPE_BIOMETRIC
-            } else BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN
+            } else {
+                BiometricPrompt.AUTHENTICATION_RESULT_TYPE_UNKNOWN
+            }
         }
 
     companion object {
