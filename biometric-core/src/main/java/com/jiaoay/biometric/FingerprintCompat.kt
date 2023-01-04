@@ -22,6 +22,8 @@ abstract class FingerprintCompat(
         cryptoObject: CryptoObject?
     )
 
+    abstract fun recycle()
+
     /**
      * 有检测到指纹识别设备
      */

@@ -125,6 +125,10 @@ class FingerprintApi28Compat(context: Context) : FingerprintCompat(context) {
         }
     }
 
+    override fun recycle() {
+
+    }
+
     override fun isHardWareDetected(): Boolean {
         return true
     }

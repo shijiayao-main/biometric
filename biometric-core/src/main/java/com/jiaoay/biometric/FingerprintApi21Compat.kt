@@ -69,6 +69,13 @@ class FingerprintApi21Compat(context: Context) : FingerprintCompat(context) {
         }
     }
 
+    override fun recycle() {
+        val cancellationSignal = cancellationSignalProvider.fingerprintCancellationSignal
+        if (cancellationSignal.isCanceled.not()) {
+            cancellationSignal.cancel()
+        }
+    }
+
     override fun isHardWareDetected(): Boolean {
         return fingerprintManager.isHardwareDetected
     }
