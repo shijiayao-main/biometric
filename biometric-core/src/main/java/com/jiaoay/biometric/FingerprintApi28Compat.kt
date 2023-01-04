@@ -1,6 +1,7 @@
 package com.jiaoay.biometric
 
 import android.content.Context
+import android.content.DialogInterface
 import android.hardware.biometrics.BiometricPrompt
 import android.hardware.fingerprint.FingerprintManager
 import android.os.Build
@@ -55,6 +56,12 @@ class FingerprintApi28Compat(context: Context) : FingerprintCompat(context) {
         val biometricPromptBuilder = BiometricPrompt.Builder(
             context
         )
+            .setTitle("我也不想设置title, 这实在是太阴间了")
+            .setNegativeButton("阴间中的阴间", executor, object : DialogInterface.OnClickListener {
+                override fun onClick(dialog: DialogInterface?, which: Int) {
+
+                }
+            })
         // TODO:
         val isConfirmationRequired = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

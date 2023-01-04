@@ -13,8 +13,9 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:enableOnBackInvokedCallback="true"
         android:theme="@style/Theme.BiometricDemo"
-        tools:targetApi="31">
+        tools:targetApi="tiramisu">
         <activity
             android:name="com.jiaoay.biometric.demo.MainActivity"
             android:exported="true"
